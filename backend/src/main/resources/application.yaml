@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: nexo-cfdi
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexocfdi}
+    username: ${DB_USERNAME:nexo}
+    password: ${DB_PASSWORD:nexo}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: ${SHOW_SQL:false}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://login.microsoftonline.com/common/discovery/v2.0/keys
+
+server:
+  port: ${SERVER_PORT:8080}
+
+nexo:
+  microsoft:
+    client-id: ${AZURE_CLIENT_ID:changeme}
+    client-secret: ${AZURE_CLIENT_SECRET:changeme}
+    tenant-id: common
+    redirect-uri: ${AZURE_REDIRECT_URI:http://localhost:8080/api/v1/ingestion/oauth2/callback/microsoft}
+    login-client-id: ${AZURE_LOGIN_CLIENT_ID:changeme}
+    scopes:
+      - openid
+      - profile
+      - email
+      - offline_access
+      - https://outlook.office.com/IMAP.AccessAsUser.All
+      - https://outlook.office.com/SMTP.Send
+
+  encryption:
+    key: ${TOKEN_ENCRYPTION_KEY:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}
+
+  polling:
+    interval-minutes: ${POLLING_INTERVAL_MINUTES:15}

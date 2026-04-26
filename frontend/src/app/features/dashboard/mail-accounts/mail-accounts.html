@@ -1,0 +1,91 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Cuentas de correo</h2>
+      <p class="page-subtitle">Administra las cuentas vinculadas para la sincronización de CFDIs.</p>
+    </div>
+    <button mat-flat-button (click)="openLinkDialog()" [disabled]="loading()" class="link-btn">
+      <mat-icon>add</mat-icon>
+      Vincular cuenta
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40" />
+    </div>
+  } @else if (accounts().length === 0) {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">mail_outline</mat-icon>
+      <h3>Sin cuentas vinculadas</h3>
+      <p>Vincula una cuenta de Microsoft 365 para comenzar a recibir tus CFDIs automáticamente.</p>
+      <button mat-flat-button (click)="openLinkDialog()" class="link-btn">
+        <mat-icon>add</mat-icon>
+        Vincular primera cuenta
+      </button>
+    </div>
+  } @else {
+    <div class="table-container">
+      <table mat-table [dataSource]="accounts()" class="accounts-table">
+
+        <ng-container matColumnDef="emailAddress">
+          <th mat-header-cell *matHeaderCellDef>Correo</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="email-cell">{{ row.emailAddress }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="displayName">
+          <th mat-header-cell *matHeaderCellDef>Nombre</th>
+          <td mat-cell *matCellDef="let row">{{ row.displayName }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="provider">
+          <th mat-header-cell *matHeaderCellDef>Proveedor</th>
+          <td mat-cell *matCellDef="let row">
+            <mat-chip class="provider-chip provider-{{ row.provider | lowercase }}">
+              {{ row.provider }}
+            </mat-chip>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Estado</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="status-badge status-{{ row.status | lowercase }}">
+              {{ row.status }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="lastSyncAt">
+          <th mat-header-cell *matHeaderCellDef>Última sincronización</th>
+          <td mat-cell *matCellDef="let row">
+            @if (row.lastSyncAt) {
+              {{ row.lastSyncAt | date: 'dd/MM/yyyy HH:mm' }}
+            } @else {
+              <span class="never-synced">Nunca</span>
+            }
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let row">
+            <button
+              mat-icon-button
+              (click)="unlink(row)"
+              matTooltip="Desvincular cuenta"
+              class="unlink-btn"
+            >
+              <mat-icon>link_off</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
+  }
+</div>

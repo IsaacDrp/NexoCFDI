@@ -1,0 +1,32 @@
+# Environment — secrets, never commit
+.env
+
+# Backend build
+backend/build/
+backend/.gradle/
+backend/out/
+
+# Frontend build
+frontend/dist/
+frontend/.angular/
+frontend/node_modules/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AI Agents & Development
+CLAUDE.md
+.cursor/
+.cursorrules
+.cursorignore
+.windsurfrules
+.gemini/
+cline_docs/
+.cline/
+*.ai.md
