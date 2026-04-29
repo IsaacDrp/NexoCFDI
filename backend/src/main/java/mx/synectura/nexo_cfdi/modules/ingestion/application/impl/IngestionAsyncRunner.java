@@ -144,13 +144,38 @@ public class IngestionAsyncRunner {
                                        String userRfc) {
         String mid = msg.messageId();
 
+        // ── Paso 0: Construir ruta y subir PDF tempranamente ─────────────────
+        String safeMsg  = sanitize(msg.messageId());
+        String keyBase  = String.format("%d/%02d/%s/%s", year, month, userRfc, safeMsg);
+        log.debug("RUTA_BASE job={} msgId={} keyBase={}", jobRunId, mid, keyBase);
+
+        String pdfKey = null;
+        Optional<FileBytes> pdfOpt = findFile(msg, "pdf");
+        if (pdfOpt.isPresent()) {
+            pdfKey = keyBase + "/" + sanitize(pdfOpt.get().filename());
+            long t1 = System.currentTimeMillis();
+            documentStorage.store(pdfKey, pdfOpt.get().content(), "application/pdf");
+            log.info("PDF_STORED_EARLY job={} msgId={} key={} bytes={} ms={}",
+                    jobRunId, mid, pdfKey, pdfOpt.get().content().length, System.currentTimeMillis() - t1);
+        }
+
+        String finalPdfKey = pdfKey;
+        FileBytes pdfFile = pdfOpt.orElse(null);
+        java.util.function.Function<List<IngestedAttachment>, List<IngestedAttachment>> applyPdfKey = (atts) -> 
+            atts.stream().map(a -> {
+                if (finalPdfKey != null && pdfFile != null && "pdf".equals(a.extension()) && a.filename().equals(pdfFile.filename())) {
+                    return withKey(a, finalPdfKey);
+                }
+                return a;
+            }).toList();
+
         // ── Paso 1: Verificar XML ────────────────────────────────────────────
         if (!det.hasXml()) {
             log.warn("NO_XML job={} msgId={} adjuntos={} → ERROR guardado",
                     jobRunId, mid, det.attachments().size());
             return ingestedEmailRepository.save(
                     buildEmail(userId, mailAccountId, jobRunId, msg, det,
-                            EmailProcessingStatus.ERROR, "NO_XML", null, det.attachments()));
+                            EmailProcessingStatus.ERROR, "NO_XML", null, applyPdfKey.apply(det.attachments())));
         }
 
         // ── Paso 2: Extraer bytes del XML ────────────────────────────────────
@@ -160,7 +185,7 @@ public class IngestionAsyncRunner {
                     jobRunId, mid);
             return ingestedEmailRepository.save(
                     buildEmail(userId, mailAccountId, jobRunId, msg, det,
-                            EmailProcessingStatus.ERROR, "NO_XML", null, det.attachments()));
+                            EmailProcessingStatus.ERROR, "NO_XML", null, applyPdfKey.apply(det.attachments())));
         }
         FileBytes xmlFile = xmlOpt.get();
         log.debug("XML_EXTRAIDO job={} msgId={} archivo={} bytes={}",
@@ -178,7 +203,7 @@ public class IngestionAsyncRunner {
             return ingestedEmailRepository.save(
                     buildEmail(userId, mailAccountId, jobRunId, msg, det,
                             EmailProcessingStatus.ERROR, "PARSE_ERROR: " + ex.getMessage(),
-                            null, det.attachments()));
+                            null, applyPdfKey.apply(det.attachments())));
         }
 
         // ── Paso 4: Validar RFC ──────────────────────────────────────────────
@@ -191,47 +216,24 @@ public class IngestionAsyncRunner {
                     buildEmail(userId, mailAccountId, jobRunId, msg, det,
                             EmailProcessingStatus.ERROR,
                             "RFC_MISMATCH: esperado=" + userRfc + " encontrado=" + rfcEnDoc,
-                            cfdi.uuid(), det.attachments()));
+                            cfdi, applyPdfKey.apply(det.attachments())));
         }
         log.debug("RFC_OK job={} msgId={} rfc={}", jobRunId, mid, userRfc);
 
-        // ── Paso 5: Construir ruta ────────────────────────────────────────────
-        String safeMsg  = sanitize(msg.messageId());
-        String keyBase  = String.format("%d/%02d/%s/%s", year, month, userRfc, safeMsg);
-        log.debug("RUTA_BASE job={} msgId={} keyBase={}", jobRunId, mid, keyBase);
-
-        // ── Paso 6: Subir XML ────────────────────────────────────────────────
+        // ── Paso 5: Subir XML ────────────────────────────────────────────────
         String xmlKey = keyBase + "/" + sanitize(xmlFile.filename());
         long t0 = System.currentTimeMillis();
         documentStorage.store(xmlKey, xmlFile.content(), "application/xml");
         log.info("XML_STORED job={} msgId={} key={} bytes={} ms={}",
                 jobRunId, mid, xmlKey, xmlFile.content().length, System.currentTimeMillis() - t0);
 
-        // ── Paso 7: Subir PDF ────────────────────────────────────────────────
-        String pdfKey = null;
-        Optional<FileBytes> pdfOpt = findFile(msg, "pdf");
-        if (pdfOpt.isPresent()) {
-            pdfKey = keyBase + "/" + sanitize(pdfOpt.get().filename());
-            long t1 = System.currentTimeMillis();
-            documentStorage.store(pdfKey, pdfOpt.get().content(), "application/pdf");
-            log.info("PDF_STORED job={} msgId={} key={} bytes={} ms={}",
-                    jobRunId, mid, pdfKey, pdfOpt.get().content().length, System.currentTimeMillis() - t1);
-        } else {
-            log.debug("PDF_NO_ENCONTRADO job={} msgId={}", jobRunId, mid);
-        }
-
-        // ── Paso 8: Persistir con storage keys ───────────────────────────────
+        // ── Paso 6: Persistir con storage keys ───────────────────────────────
         String finalXmlKey = xmlKey;
-        String finalPdfKey = pdfKey;
-        FileBytes pdfFile  = pdfOpt.orElse(null);
 
-        List<IngestedAttachment> attachmentsConKeys = det.attachments().stream()
+        List<IngestedAttachment> attachmentsConKeys = applyPdfKey.apply(det.attachments()).stream()
                 .map(a -> {
                     if ("xml".equals(a.extension()) && a.filename().equals(xmlFile.filename())) {
                         return withKey(a, finalXmlKey);
-                    }
-                    if (pdfFile != null && "pdf".equals(a.extension()) && a.filename().equals(pdfFile.filename())) {
-                        return withKey(a, finalPdfKey);
                     }
                     return a;
                 })
@@ -239,7 +241,7 @@ public class IngestionAsyncRunner {
 
         IngestedEmail saved = ingestedEmailRepository.save(
                 buildEmail(userId, mailAccountId, jobRunId, msg, det,
-                        EmailProcessingStatus.STORED, null, cfdi.uuid(), attachmentsConKeys));
+                        EmailProcessingStatus.STORED, null, cfdi, attachmentsConKeys));
 
         log.info("EMAIL_STORED job={} msgId={} emailId={} uuid={} xmlKey={} pdfKey={}",
                 jobRunId, mid, saved.id(), cfdi.uuid(), xmlKey, pdfKey != null ? pdfKey : "-");
@@ -275,14 +277,22 @@ public class IngestionAsyncRunner {
                                      InvoiceDetectionService.DetectionResult det,
                                      EmailProcessingStatus status,
                                      String errorCause,
-                                     String cfdiUuid,
+                                     CfdiData cfdi,
                                      List<IngestedAttachment> attachments) {
         return new IngestedEmail(
                 null, userId, mailAccountId, jobRunId,
                 msg.messageId(), msg.subject(), msg.fromAddress(), msg.receivedAt(),
                 det.hasZip(), det.hasXml(), det.hasPdf(),
                 det.reasons(), attachments, null,
-                status, errorCause, cfdiUuid);
+                status, errorCause,
+                cfdi != null ? cfdi.uuid() : null,
+                cfdi != null ? cfdi.rfcEmisor() : null,
+                cfdi != null ? cfdi.nombreEmisor() : null,
+                cfdi != null ? cfdi.fecha() : null,
+                cfdi != null ? cfdi.subtotal() : null,
+                cfdi != null ? cfdi.iva() : null,
+                cfdi != null ? cfdi.total() : null,
+                IngestedEmailSource.EMAIL);
     }
 
     private static IngestedAttachment withKey(IngestedAttachment a, String key) {

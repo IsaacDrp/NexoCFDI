@@ -16,5 +16,13 @@ public interface IngestedEmailJpaRepository extends JpaRepository<IngestedEmailE
                                                            @Param("from") OffsetDateTime from,
                                                            @Param("to") OffsetDateTime to);
 
+    @Query("SELECT a.storageKey FROM IngestedAttachmentEntity a " +
+            "WHERE a.ingestedEmail.user.id = :userId " +
+            "AND a.ingestedEmail.receivedAt >= :from AND a.ingestedEmail.receivedAt < :to " +
+            "AND a.storageKey IS NOT NULL")
+    List<String> findStorageKeysByUserAndPeriod(@Param("userId") UUID userId,
+                                                @Param("from") OffsetDateTime from,
+                                                @Param("to") OffsetDateTime to);
+
     boolean existsByMailAccountIdAndMessageId(UUID mailAccountId, String messageId);
 }

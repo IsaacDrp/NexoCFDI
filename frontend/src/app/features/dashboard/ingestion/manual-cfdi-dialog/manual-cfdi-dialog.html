@@ -1,0 +1,147 @@
+<h2 mat-dialog-title class="dialog-title">
+  <mat-icon class="dialog-title-icon">{{ editMode ? 'edit' : 'add_circle_outline' }}</mat-icon>
+  {{ editMode ? 'Editar datos CFDI' : 'Agregar CFDI manual' }}
+</h2>
+
+<mat-dialog-content class="dialog-content">
+  <p class="dialog-hint">
+    {{ editMode
+      ? 'Modifica los datos de facturación. Puedes también adjuntar un archivo faltante.'
+      : 'Ingresa los datos del CFDI y adjunta el archivo PDF o ZIP si lo tienes.' }}
+  </p>
+
+  <form [formGroup]="form" class="cfdi-form">
+
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field-rfc">
+        <mat-label>RFC Emisor *</mat-label>
+        <input matInput formControlName="rfcEmisor" maxlength="13" placeholder="XAXX010101000" autocomplete="off">
+        @if (form.controls.rfcEmisor.hasError('required') && form.controls.rfcEmisor.touched) {
+          <mat-error>RFC requerido</mat-error>
+        }
+        @if (form.controls.rfcEmisor.hasError('maxlength')) {
+          <mat-error>Máximo 13 caracteres</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field-nombre">
+        <mat-label>Nombre Emisor</mat-label>
+        <input matInput formControlName="nombreEmisor" maxlength="300" autocomplete="off">
+      </mat-form-field>
+    </div>
+
+    <mat-form-field appearance="outline" class="field-full">
+      <mat-label>UUID CFDI</mat-label>
+      <input matInput formControlName="cfdiUuid" maxlength="36" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off">
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="field-full">
+      <mat-label>Fecha CFDI *</mat-label>
+      <input matInput formControlName="fecha" type="datetime-local">
+      @if (form.controls.fecha.hasError('required') && form.controls.fecha.touched) {
+        <mat-error>Fecha requerida</mat-error>
+      }
+    </mat-form-field>
+
+    <div class="form-row">
+      <mat-form-field appearance="outline" class="field-amount">
+        <mat-label>Subtotal</mat-label>
+        <span matTextPrefix>$&nbsp;</span>
+        <input matInput formControlName="subtotal" type="number" min="0" step="0.01">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field-amount">
+        <mat-label>IVA</mat-label>
+        <span matTextPrefix>$&nbsp;</span>
+        <input matInput formControlName="iva" type="number" min="0" step="0.01">
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="field-amount">
+        <mat-label>Total</mat-label>
+        <span matTextPrefix>$&nbsp;</span>
+        <input matInput formControlName="total" type="number" min="0" step="0.01">
+      </mat-form-field>
+    </div>
+
+    <!-- Original PDF Preview -->
+    @if (editMode && hasStoredPdf()) {
+      <div class="stored-pdf-section">
+        <div class="stored-pdf-info">
+          <mat-icon class="stored-pdf-icon">picture_as_pdf</mat-icon>
+          <span>PDF original disponible</span>
+          <button mat-button color="primary" class="preview-btn" type="button" (click)="previewStoredPdf()">
+            Ver PDF
+          </button>
+        </div>
+        @if (!replaceFile()) {
+          <button mat-stroked-button color="warn" class="replace-btn" type="button" (click)="replaceFile.set(true)">
+            Reemplazar archivo
+          </button>
+        } @else {
+          <button mat-button class="replace-btn" type="button" (click)="replaceFile.set(false); selectedFile.set(null)">
+            Conservar original
+          </button>
+        }
+      </div>
+    }
+
+    <!-- File picker: siempre en modo nuevo; en modo edición solo si falta PDF o XML o si eligió reemplazar -->
+    @if (showFilePicker) {
+      <div class="file-section">
+        @if (!editMode) {
+          <p class="file-section-label">Adjuntar PDF o ZIP (opcional)</p>
+        } @else {
+          <p class="file-section-label">
+            Adjuntar archivo faltante
+            @if (!existingEmail?.hasPdf && !existingEmail?.hasXml) {
+              <span class="file-missing-hint">— no tiene PDF ni XML</span>
+            } @else if (!existingEmail?.hasPdf) {
+              <span class="file-missing-hint">— no tiene PDF</span>
+            } @else {
+              <span class="file-missing-hint">— no tiene XML</span>
+            }
+          </p>
+        }
+        @if (!selectedFile()) {
+          <label class="file-drop-zone" for="file-input">
+            <mat-icon class="file-drop-icon">upload_file</mat-icon>
+            <span class="file-drop-label">
+              {{ editMode ? 'Adjuntar PDF, XML o ZIP' : 'Adjuntar PDF o ZIP (opcional)' }}
+            </span>
+            <span class="file-drop-hint">Haz clic para seleccionar</span>
+            <input id="file-input" type="file" [accept]="acceptedFileTypes" class="file-input-hidden"
+                   (change)="onFileChange($event)">
+          </label>
+        } @else {
+          <div class="file-selected">
+            <mat-icon class="file-selected-icon">
+              @if (selectedFile()!.name.endsWith('.pdf')) { picture_as_pdf }
+              @else if (selectedFile()!.name.endsWith('.xml')) { code }
+              @else { folder_zip }
+            </mat-icon>
+            <div class="file-selected-info">
+              <span class="file-selected-name">{{ selectedFile()!.name }}</span>
+              <span class="file-selected-size">{{ (selectedFile()!.size / 1024).toFixed(1) }} KB</span>
+            </div>
+            <button mat-icon-button class="file-remove-btn" (click)="removeFile()" matTooltip="Quitar archivo" type="button">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        }
+      </div>
+    }
+
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button mat-stroked-button [mat-dialog-close]="null" [disabled]="saving()">Cancelar</button>
+  <button mat-flat-button (click)="submit()" [disabled]="saving()">
+    @if (saving()) {
+      <mat-spinner diameter="16" class="btn-spinner" />
+    } @else {
+      <mat-icon>{{ editMode ? 'save' : 'add' }}</mat-icon>
+    }
+    {{ editMode ? 'Guardar cambios' : 'Guardar' }}
+  </button>
+</mat-dialog-actions>

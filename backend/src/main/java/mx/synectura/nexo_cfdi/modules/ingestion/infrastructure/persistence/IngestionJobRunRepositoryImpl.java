@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -50,6 +51,18 @@ public class IngestionJobRunRepositoryImpl implements IngestionJobRunRepository 
     public boolean existsRunning(UUID userId, int year, int month) {
         return jpa.existsByTriggeredByUserIdAndTargetYearAndTargetMonthAndStatus(
                 userId, year, month, JobStatus.RUNNING);
+    }
+
+    @Override
+    public List<IngestionJobRun> findPreviousRuns(UUID userId, int year, int month) {
+        return jpa.findByTriggeredByUserIdAndTargetYearAndTargetMonth(userId, year, month)
+                .stream().map(this::toDomain).toList();
+    }
+
+    @Override
+    @Transactional
+    public void deleteAllByUserAndPeriod(UUID userId, int year, int month) {
+        jpa.deleteByUserIdAndYearAndMonth(userId, year, month);
     }
 
     @Override
