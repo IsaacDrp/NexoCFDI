@@ -10,4 +10,7 @@ public interface MailAccountRepository {
     MailAccount save(MailAccount account, String encryptedRefreshToken, String tokenIv);
     void updateStatus(UUID id, SyncStatus status, String errorMessage);
     void updateLastSyncAt(UUID id);
+
+    /** Devuelve user_ids únicos que tienen al menos una cuenta en el estado dado. */
+    List<UUID> findDistinctUserIdsByStatus(SyncStatus status);
 }

@@ -75,6 +75,35 @@
             </mat-form-field>
           </div>
 
+          <div class="form-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Tipo de persona</mat-label>
+              <mat-select formControlName="personType">
+                @for (option of personTypeOptions; track option.value) {
+                  <mat-option [value]="option.value">{{ option.label }}</mat-option>
+                }
+              </mat-select>
+              @if (form.get('personType')?.hasError('required') && form.get('personType')?.touched) {
+                <mat-error>El tipo de persona es requerido</mat-error>
+              }
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Régimen fiscal</mat-label>
+              <mat-select formControlName="regimenFiscal">
+                @for (regime of filteredRegimes(); track regime.value) {
+                  <mat-option [value]="regime.value">{{ regime.clave }} – {{ regime.label }}</mat-option>
+                }
+              </mat-select>
+              @if (!form.get('personType')?.value) {
+                <mat-hint>Selecciona primero el tipo de persona</mat-hint>
+              }
+              @if (form.get('regimenFiscal')?.hasError('required') && form.get('regimenFiscal')?.touched) {
+                <mat-error>El régimen fiscal es requerido</mat-error>
+              }
+            </mat-form-field>
+          </div>
+
           <div class="form-actions">
             <button
               mat-flat-button

@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import mx.synectura.nexo_cfdi.shared.domain.user.PersonType;
+import mx.synectura.nexo_cfdi.shared.domain.user.RegimenFiscal;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -44,6 +46,14 @@ public class UserEntity {
 
     @Column(name = "postal_code", length = 5)
     private String postalCode;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "person_type", length = 10)
+    private PersonType personType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "regimen_fiscal", length = 50)
+    private RegimenFiscal regimenFiscal;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

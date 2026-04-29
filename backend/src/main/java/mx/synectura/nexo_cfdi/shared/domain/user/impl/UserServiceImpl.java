@@ -29,6 +29,8 @@ public class UserServiceImpl implements UserService {
                 req.rfc(),
                 req.razonSocial(),
                 req.postalCode(),
+                req.personType(),
+                req.regimenFiscal(),
                 existing != null ? existing.createdAt() : null,
                 null
         );

@@ -33,7 +33,9 @@ public class UserRepositoryImpl implements UserRepository {
     private User toDomain(UserEntity e) {
         return new User(e.getId(), e.getMicrosoftSub(), e.getEmail(), e.getFirstName(),
                 e.getPaternalSurname(), e.getMaternalSurname(), e.getRfc(),
-                e.getRazonSocial(), e.getPostalCode(), e.getCreatedAt(), e.getUpdatedAt());
+                e.getRazonSocial(), e.getPostalCode(),
+                e.getPersonType(), e.getRegimenFiscal(),
+                e.getCreatedAt(), e.getUpdatedAt());
     }
 
     private UserEntity toEntity(User u) {
@@ -46,6 +48,8 @@ public class UserRepositoryImpl implements UserRepository {
         e.setRfc(u.rfc());
         e.setRazonSocial(u.razonSocial());
         e.setPostalCode(u.postalCode());
+        e.setPersonType(u.personType());
+        e.setRegimenFiscal(u.regimenFiscal());
         return e;
     }
 }
