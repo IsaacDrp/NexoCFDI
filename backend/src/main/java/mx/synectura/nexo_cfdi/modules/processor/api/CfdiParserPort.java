@@ -1,9 +1,9 @@
 package mx.synectura.nexo_cfdi.modules.processor.api;
 
-import java.io.InputStream;
-import java.util.Map;
+import mx.synectura.nexo_cfdi.modules.processor.domain.CfdiData;
+import mx.synectura.nexo_cfdi.modules.processor.domain.CfdiParseException;
 
 public interface CfdiParserPort {
-    Map<String, Object> parseXml(InputStream xmlContent);
-    boolean validate(InputStream xmlContent);
+    /** Parsea el XML de un CFDI 3.3 o 4.0 y extrae los datos clave. */
+    CfdiData parse(byte[] xmlContent) throws CfdiParseException;
 }

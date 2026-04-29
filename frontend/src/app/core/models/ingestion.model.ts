@@ -6,7 +6,10 @@ export type MatchReason =
   | 'HAS_XML_ONLY'
   | 'HAS_PDF_ONLY'
   | 'KEYWORD_MATCH'
-  | 'KNOWN_INVOICER';
+  | 'KNOWN_INVOICER'
+  | 'SENDER_MATCH';
+
+export type EmailProcessingStatus = 'PENDING' | 'STORED' | 'ERROR';
 
 export interface IngestionRequest {
   month: number;
@@ -35,6 +38,7 @@ export interface AttachmentInfo {
   insideZip: boolean;
   parentZipName: string | null;
   depth: number;
+  storageKey: string | null;
 }
 
 export interface IngestedEmailResponse {
@@ -49,4 +53,7 @@ export interface IngestedEmailResponse {
   hasPdf: boolean;
   matchReasons: MatchReason[];
   attachments: AttachmentInfo[];
+  processingStatus: EmailProcessingStatus;
+  errorCause: string | null;
+  cfdiUuid: string | null;
 }

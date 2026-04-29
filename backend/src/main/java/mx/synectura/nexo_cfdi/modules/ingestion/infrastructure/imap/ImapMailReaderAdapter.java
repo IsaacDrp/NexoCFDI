@@ -30,10 +30,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
-/**
- * Lectura de buzón Microsoft 365 vía IMAP + SASL XOAUTH2.
- * Devuelve mensajes con sus adjuntos cargados en memoria como byte[].
- */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -51,26 +47,59 @@ public class ImapMailReaderAdapter implements EmailReaderPort {
         MailAccountEntity account = mailAccountJpa.findById(mailAccountId)
                 .orElseThrow(() -> new IllegalArgumentException("MailAccount no encontrado: " + mailAccountId));
 
+        String email = account.getEmailAddress();
+        log.info("IMAP_CONNECT cuenta={} email={} host={}:{}", mailAccountId, email, IMAP_HOST, IMAP_PORT);
+
         String accessToken = obtainAccessToken(account);
+        log.debug("IMAP_TOKEN_OK cuenta={} email={}", mailAccountId, email);
+
         Session session = buildSession();
 
         try (Store store = session.getStore("imap")) {
-            store.connect(IMAP_HOST, IMAP_PORT, account.getEmailAddress(), accessToken);
+            store.connect(IMAP_HOST, IMAP_PORT, email, accessToken);
+            log.info("IMAP_CONNECTED cuenta={} email={}", mailAccountId, email);
+
             try (Folder inbox = store.getFolder("INBOX")) {
                 inbox.open(Folder.READ_ONLY);
-                Message[] messages = inbox.search(buildDateRangeTerm(from, to));
+                log.debug("IMAP_INBOX_OPEN cuenta={} total_mensajes={}", mailAccountId, inbox.getMessageCount());
+
+                SearchTerm term = buildDateRangeTerm(from, to);
+                log.info("IMAP_SEARCH cuenta={} email={} desde={} hasta={}", mailAccountId, email, from, to);
+
+                Message[] messages = inbox.search(term);
+                log.info("IMAP_SEARCH_RESULT cuenta={} email={} encontrados={}", mailAccountId, email, messages.length);
+
                 List<RawEmailMessage> result = new ArrayList<>(messages.length);
+                int errores = 0;
                 for (Message msg : messages) {
                     try {
-                        result.add(toRaw(msg));
+                        RawEmailMessage raw = toRaw(msg);
+                        log.debug("IMAP_MSG cuenta={} msgId={} from={} subject=\"{}\" adjuntos={}",
+                                mailAccountId, raw.messageId(), raw.fromAddress(), raw.subject(),
+                                raw.attachments().size());
+                        if (!raw.attachments().isEmpty()) {
+                            raw.attachments().forEach(att ->
+                                    log.debug("IMAP_ADJUNTO cuenta={} msgId={} archivo={} bytes={}",
+                                            mailAccountId, raw.messageId(), att.filename(), att.content().length));
+                        }
+                        result.add(raw);
                     } catch (Exception ex) {
-                        log.warn("Error procesando mensaje en cuenta {}: {}", mailAccountId, ex.getMessage());
+                        errores++;
+                        log.warn("IMAP_MSG_ERROR cuenta={} email={} error={}", mailAccountId, email, ex.getMessage());
                     }
                 }
+
+                if (errores > 0) {
+                    log.warn("IMAP_PARSE_ERRORS cuenta={} email={} errores={} de {}",
+                            mailAccountId, email, errores, messages.length);
+                }
+                log.info("IMAP_DONE cuenta={} email={} procesados={} errores={}",
+                        mailAccountId, email, result.size(), errores);
                 return result;
             }
         } catch (MessagingException e) {
-            throw new ImapAccessException("Error accediendo IMAP de " + account.getEmailAddress(), e);
+            log.error("IMAP_FAIL cuenta={} email={} causa={}", mailAccountId, email, e.getMessage(), e);
+            throw new ImapAccessException("Error accediendo IMAP de " + email, e);
         }
     }
 
@@ -82,9 +111,10 @@ public class ImapMailReaderAdapter implements EmailReaderPort {
         String encryptedRefresh = account.getEncryptedRefreshToken() + ":" + account.getTokenIv();
         OAuthTokens tokens = provider.refreshAccessToken(encryptedRefresh);
 
-        String newRefresh = tokens.refreshToken();
+        String newRefresh   = tokens.refreshToken();
         String plainOldRefresh = encryptionService.decrypt(account.getEncryptedRefreshToken(), account.getTokenIv());
         if (newRefresh != null && !newRefresh.equals(plainOldRefresh)) {
+            log.debug("OAUTH_TOKEN_ROTADO cuenta={} email={}", account.getId(), account.getEmailAddress());
             AesGcmTokenEncryptionService.EncryptedToken updated = encryptionService.encrypt(newRefresh);
             account.setEncryptedRefreshToken(updated.ciphertext());
             account.setTokenIv(updated.iv());
@@ -111,20 +141,20 @@ public class ImapMailReaderAdapter implements EmailReaderPort {
     private SearchTerm buildDateRangeTerm(OffsetDateTime from, OffsetDateTime to) {
         Date fromDate = Date.from(from.toInstant());
         Date toDate   = Date.from(to.toInstant());
-        ReceivedDateTerm geFrom = new ReceivedDateTerm(ComparisonTerm.GE, fromDate);
-        ReceivedDateTerm ltTo   = new ReceivedDateTerm(ComparisonTerm.LT, toDate);
-        return new AndTerm(geFrom, ltTo);
+        return new AndTerm(
+                new ReceivedDateTerm(ComparisonTerm.GE, fromDate),
+                new ReceivedDateTerm(ComparisonTerm.LT, toDate));
     }
 
     private RawEmailMessage toRaw(Message msg) throws MessagingException, IOException {
-        String messageId = extractMessageId(msg);
-        String subject = msg.getSubject();
+        String messageId  = extractMessageId(msg);
+        String subject    = msg.getSubject();
         String fromAddress = extractFrom(msg);
         OffsetDateTime receivedAt = msg.getReceivedDate() != null
                 ? msg.getReceivedDate().toInstant().atZone(ZoneId.systemDefault()).toOffsetDateTime()
                 : OffsetDateTime.now();
 
-        StringBuilder bodyText = new StringBuilder();
+        StringBuilder bodyText  = new StringBuilder();
         List<RawEmailMessage.RawAttachment> attachments = new ArrayList<>();
         collectParts(msg, bodyText, attachments);
 
@@ -156,7 +186,7 @@ public class ImapMailReaderAdapter implements EmailReaderPort {
         }
 
         String disposition = part.getDisposition();
-        String filename = part.getFileName();
+        String filename    = part.getFileName();
         boolean isAttachment = Part.ATTACHMENT.equalsIgnoreCase(disposition)
                 || Part.INLINE.equalsIgnoreCase(disposition)
                 || (filename != null && !filename.isBlank());
@@ -182,7 +212,6 @@ public class ImapMailReaderAdapter implements EmailReaderPort {
         }
     }
 
-    /** Excepción específica del adapter para diferenciar fallos de red/auth de errores de negocio. */
     public static class ImapAccessException extends RuntimeException {
         public ImapAccessException(String message, Throwable cause) { super(message, cause); }
     }

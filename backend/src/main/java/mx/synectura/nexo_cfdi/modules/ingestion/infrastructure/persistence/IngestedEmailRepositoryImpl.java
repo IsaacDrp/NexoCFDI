@@ -1,6 +1,7 @@
 package mx.synectura.nexo_cfdi.modules.ingestion.infrastructure.persistence;
 
 import lombok.RequiredArgsConstructor;
+import mx.synectura.nexo_cfdi.modules.ingestion.domain.EmailProcessingStatus;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.IngestedAttachment;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.IngestedEmail;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.IngestedEmailRepository;
@@ -37,6 +38,10 @@ public class IngestedEmailRepositoryImpl implements IngestedEmailRepository {
         entity.setHasXml(email.hasXml());
         entity.setHasPdf(email.hasPdf());
         entity.setMatchReasons(email.matchReasons());
+        entity.setProcessingStatus(
+                email.processingStatus() != null ? email.processingStatus() : EmailProcessingStatus.PENDING);
+        entity.setErrorCause(email.errorCause());
+        entity.setCfdiUuid(email.cfdiUuid());
 
         for (IngestedAttachment att : email.attachments()) {
             IngestedAttachmentEntity attEntity = new IngestedAttachmentEntity();
@@ -47,6 +52,7 @@ public class IngestedEmailRepositoryImpl implements IngestedEmailRepository {
             attEntity.setInsideZip(att.insideZip());
             attEntity.setParentZipName(att.parentZipName());
             attEntity.setDepth((short) att.depth());
+            attEntity.setStorageKey(att.storageKey());
             entity.getAttachments().add(attEntity);
         }
 
@@ -70,7 +76,7 @@ public class IngestedEmailRepositoryImpl implements IngestedEmailRepository {
                 .map(a -> new IngestedAttachment(
                         a.getId(), e.getId(), a.getFilename(), a.getExtension(),
                         a.getSizeBytes(), a.isInsideZip(), a.getParentZipName(),
-                        a.getDepth(), a.getCreatedAt()))
+                        a.getDepth(), a.getCreatedAt(), a.getStorageKey()))
                 .collect(Collectors.toList());
         return new IngestedEmail(
                 e.getId(),
@@ -86,7 +92,9 @@ public class IngestedEmailRepositoryImpl implements IngestedEmailRepository {
                 e.isHasPdf(),
                 e.getMatchReasonsAsSet(),
                 atts,
-                e.getCreatedAt()
-        );
+                e.getCreatedAt(),
+                e.getProcessingStatus(),
+                e.getErrorCause(),
+                e.getCfdiUuid());
     }
 }

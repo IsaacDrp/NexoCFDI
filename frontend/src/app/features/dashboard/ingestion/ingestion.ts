@@ -1,5 +1,5 @@
 import { Component, NgZone, OnDestroy, computed, inject, signal } from '@angular/core';
-import { DatePipe, LowerCasePipe } from '@angular/common';
+import { DatePipe, LowerCasePipe, SlicePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, interval, switchMap, takeWhile, tap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -15,7 +15,11 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { IngestionService } from '../../../core/services/ingestion.service';
-import { IngestedEmailResponse, JobRunResponse } from '../../../core/models/ingestion.model';
+import {
+  EmailProcessingStatus,
+  IngestedEmailResponse,
+  JobRunResponse,
+} from '../../../core/models/ingestion.model';
 import { KeywordConfigDialogComponent } from './keyword-config-dialog/keyword-config-dialog';
 
 interface ApiError {
@@ -28,6 +32,7 @@ interface ApiError {
   imports: [
     DatePipe,
     LowerCasePipe,
+    SlicePipe,
     MatButtonModule,
     MatCardModule,
     MatChipsModule,
@@ -51,15 +56,15 @@ export class IngestionComponent implements OnDestroy {
   private pollSub: Subscription | null = null;
 
   readonly months = [
-    { value: 1, label: 'Enero' },
-    { value: 2, label: 'Febrero' },
-    { value: 3, label: 'Marzo' },
-    { value: 4, label: 'Abril' },
-    { value: 5, label: 'Mayo' },
-    { value: 6, label: 'Junio' },
-    { value: 7, label: 'Julio' },
-    { value: 8, label: 'Agosto' },
-    { value: 9, label: 'Septiembre' },
+    { value: 1,  label: 'Enero' },
+    { value: 2,  label: 'Febrero' },
+    { value: 3,  label: 'Marzo' },
+    { value: 4,  label: 'Abril' },
+    { value: 5,  label: 'Mayo' },
+    { value: 6,  label: 'Junio' },
+    { value: 7,  label: 'Julio' },
+    { value: 8,  label: 'Agosto' },
+    { value: 9,  label: 'Septiembre' },
     { value: 10, label: 'Octubre' },
     { value: 11, label: 'Noviembre' },
     { value: 12, label: 'Diciembre' },
@@ -69,16 +74,26 @@ export class IngestionComponent implements OnDestroy {
   readonly yearOptions = Array.from({ length: 5 }, (_, i) => this.currentYear - i);
 
   selectedMonth = signal(new Date().getMonth() + 1);
-  selectedYear = signal(this.currentYear);
+  selectedYear  = signal(this.currentYear);
 
   triggering = signal(false);
-  jobRun = signal<JobRunResponse | null>(null);
-  emails = signal<IngestedEmailResponse[]>([]);
-  apiError = signal<ApiError | null>(null);
+  jobRun     = signal<JobRunResponse | null>(null);
+  emails     = signal<IngestedEmailResponse[]>([]);
+  apiError   = signal<ApiError | null>(null);
 
   readonly isRunning = computed(() => this.jobRun()?.status === 'RUNNING');
 
-  displayedColumns = ['subject', 'fromAddress', 'receivedAt', 'types', 'matchReasons', 'attachments'];
+  readonly displayedColumns = [
+    'processingStatus',
+    'subject',
+    'fromAddress',
+    'receivedAt',
+    'cfdiUuid',
+    'types',
+    'matchReasons',
+    'errorCause',
+    'attachments',
+  ];
 
   search() {
     this.stopPolling();
@@ -175,13 +190,35 @@ export class IngestionComponent implements OnDestroy {
 
   matchReasonLabel(reason: string): string {
     const labels: Record<string, string> = {
-      HAS_XML_PDF: 'XML + PDF',
-      HAS_ZIP: 'ZIP',
-      HAS_XML_ONLY: 'Solo XML',
-      HAS_PDF_ONLY: 'Solo PDF',
+      HAS_XML_PDF:   'XML + PDF',
+      HAS_ZIP:       'ZIP',
+      HAS_XML_ONLY:  'Solo XML',
+      HAS_PDF_ONLY:  'Solo PDF',
       KEYWORD_MATCH: 'Keyword',
       KNOWN_INVOICER: 'Emisor conocido',
+      SENDER_MATCH:  'Remitente',
     };
     return labels[reason] ?? reason;
+  }
+
+  statusLabel(status: EmailProcessingStatus): string {
+    const labels: Record<EmailProcessingStatus, string> = {
+      STORED:  'Almacenado',
+      ERROR:   'Error',
+      PENDING: 'Pendiente',
+    };
+    return labels[status] ?? status;
+  }
+
+  storedCount(): number {
+    return this.emails().filter((e) => e.processingStatus === 'STORED').length;
+  }
+
+  errorCount(): number {
+    return this.emails().filter((e) => e.processingStatus === 'ERROR').length;
+  }
+
+  storedAttachments(row: IngestedEmailResponse): number {
+    return row.attachments.filter((a) => a.storageKey != null).length;
   }
 }

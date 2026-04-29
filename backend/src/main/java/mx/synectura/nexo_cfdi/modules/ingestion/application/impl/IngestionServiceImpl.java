@@ -36,19 +36,23 @@ public class IngestionServiceImpl implements IngestionService {
         User user = resolveUser(microsoftSub);
         UUID userId = user.id();
 
+        log.info("TRIGGER job_trigger={} user={} rfc={} periodo={}/{}", trigger, userId, user.rfc(), month, year);
+
         // Idempotencia: si ya hay SUCCESS para ese período, devolver el último.
         var existingSuccess = jobRunRepository.findLatestSuccess(userId, year, month);
         if (existingSuccess.isPresent()) {
-            log.info("Ingestión idempotente: ya existe SUCCESS para user={} {}/{}", userId, month, year);
+            log.info("IDEMPOTENTE: ya existe SUCCESS job={} user={} {}/{}", existingSuccess.get().id(), userId, month, year);
             return JobRunResponse.from(existingSuccess.get());
         }
 
         // Bloquea ejecuciones concurrentes para mismo período.
         if (jobRunRepository.existsRunning(userId, year, month)) {
+            log.warn("YA_CORRIENDO user={} {}/{}", userId, month, year);
             throw new IngestionAlreadyRunningException(userId, year, month);
         }
 
         IngestionJobRun jobRun = jobRunRepository.create(trigger, userId, year, month);
+        log.info("JOB_CREADO job={} user={} {}/{} trigger={}", jobRun.id(), userId, month, year, trigger);
         asyncRunner.run(jobRun.id(), userId, year, month);
         return JobRunResponse.from(jobRun);
     }

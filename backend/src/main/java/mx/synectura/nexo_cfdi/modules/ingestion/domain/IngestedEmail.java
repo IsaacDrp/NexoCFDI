@@ -19,5 +19,8 @@ public record IngestedEmail(
         boolean hasPdf,
         Set<MatchReason> matchReasons,
         List<IngestedAttachment> attachments,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        EmailProcessingStatus processingStatus,
+        String errorCause,
+        String cfdiUuid
 ) {}
