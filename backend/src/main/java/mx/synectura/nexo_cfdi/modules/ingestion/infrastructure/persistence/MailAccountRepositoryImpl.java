@@ -57,6 +57,11 @@ public class MailAccountRepositoryImpl implements MailAccountRepository {
         jpa.updateLastSyncAt(id, OffsetDateTime.now());
     }
 
+    @Override
+    public List<UUID> findDistinctUserIdsByStatus(SyncStatus status) {
+        return jpa.findDistinctUserIdsByStatus(status);
+    }
+
     private MailAccount toDomain(MailAccountEntity e) {
         return new MailAccount(e.getId(), e.getUser().getId(), e.getDisplayName(),
                 e.getEmailAddress(), e.getProvider(), e.getStatus(),

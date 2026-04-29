@@ -13,6 +13,8 @@ public record User(
         String rfc,
         String razonSocial,
         String postalCode,
+        PersonType personType,
+        RegimenFiscal regimenFiscal,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt
 ) {}

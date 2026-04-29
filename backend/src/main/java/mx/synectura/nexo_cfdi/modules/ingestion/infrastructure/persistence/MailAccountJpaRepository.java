@@ -22,4 +22,7 @@ public interface MailAccountJpaRepository extends JpaRepository<MailAccountEntit
     @Modifying
     @Query("UPDATE MailAccountEntity m SET m.lastSyncAt = :now WHERE m.id = :id")
     void updateLastSyncAt(@Param("id") UUID id, @Param("now") OffsetDateTime now);
+
+    @Query("SELECT DISTINCT m.user.id FROM MailAccountEntity m WHERE m.status = :status")
+    List<UUID> findDistinctUserIdsByStatus(@Param("status") mx.synectura.nexo_cfdi.modules.ingestion.domain.SyncStatus status);
 }

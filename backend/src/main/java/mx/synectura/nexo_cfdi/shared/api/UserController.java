@@ -7,6 +7,7 @@ import mx.synectura.nexo_cfdi.shared.domain.user.dto.UserResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,7 +20,7 @@ public class UserController {
     @PostMapping("/profile")
     public ResponseEntity<UserResponse> upsertProfile(
             @AuthenticationPrincipal Jwt jwt,
-            @RequestBody RegisterUserRequest req) {
+            @Valid @RequestBody RegisterUserRequest req) {
         
         String sub = jwt.getSubject();
         String email = jwt.getClaimAsString("preferred_username"); // Microsoft email claim

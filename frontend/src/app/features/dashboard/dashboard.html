@@ -30,6 +30,15 @@
         <mat-icon matListItemIcon>mail_outline</mat-icon>
         <span matListItemTitle>Cuentas de correo</span>
       </a>
+      <a
+        mat-list-item
+        routerLink="ingestion"
+        routerLinkActive="active-link"
+        [routerLinkActiveOptions]="{ exact: false }"
+      >
+        <mat-icon matListItemIcon>manage_search</mat-icon>
+        <span matListItemTitle>Búsqueda de CFDIs</span>
+      </a>
     </mat-nav-list>
 
     <div class="sidenav-footer">

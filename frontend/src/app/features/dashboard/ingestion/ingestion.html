@@ -1,0 +1,214 @@
+<div class="page-container">
+  <div class="page-header">
+    <div>
+      <h2 class="page-title">Búsqueda de CFDIs</h2>
+      <p class="page-subtitle">Busca y revisa los correos con facturas recibidas en un período.</p>
+    </div>
+    <button mat-stroked-button class="keywords-btn" (click)="openKeywordConfig()">
+      <mat-icon>tune</mat-icon>
+      Palabras clave
+    </button>
+  </div>
+
+  <!-- Search form -->
+  <mat-card class="search-card" appearance="outlined">
+    <mat-card-content>
+      <div class="search-form">
+        <mat-form-field appearance="outline" class="field-month">
+          <mat-label>Mes</mat-label>
+          <mat-select [value]="selectedMonth()" (valueChange)="selectedMonth.set($event)">
+            @for (m of months; track m.value) {
+              <mat-option [value]="m.value">{{ m.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="field-year">
+          <mat-label>Año</mat-label>
+          <mat-select [value]="selectedYear()" (valueChange)="selectedYear.set($event)">
+            @for (y of yearOptions; track y) {
+              <mat-option [value]="y">{{ y }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <button
+          mat-flat-button
+          class="search-btn"
+          (click)="search()"
+          [disabled]="triggering() || isRunning()"
+        >
+          @if (triggering()) {
+            <mat-spinner diameter="18" class="btn-spinner" />
+          } @else {
+            <mat-icon>search</mat-icon>
+          }
+          Buscar CFDIs
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- API error banner -->
+  @if (apiError(); as err) {
+    <div [class]="'alert-banner alert-' + err.code.toLowerCase()">
+      <mat-icon class="alert-icon">
+        @switch (err.code) {
+          @case ('INVALID_PERIOD') { event_busy }
+          @case ('ALREADY_RUNNING') { hourglass_top }
+          @default { error_outline }
+        }
+      </mat-icon>
+      <div class="alert-body">
+        <span class="alert-title">
+          @switch (err.code) {
+            @case ('INVALID_PERIOD') { Período no disponible }
+            @case ('ALREADY_RUNNING') { Proceso en curso }
+            @default { Error }
+          }
+        </span>
+        <span class="alert-message">{{ err.message }}</span>
+      </div>
+      <button mat-icon-button class="alert-close" (click)="apiError.set(null)" aria-label="Cerrar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  }
+
+  <!-- Job status -->
+  @if (jobRun(); as job) {
+    <mat-card class="job-card" appearance="outlined">
+      <mat-card-content>
+        <div class="job-header">
+          <span [class]="'job-status-badge job-status-' + (job.status | lowercase)">
+            @switch (job.status) {
+              @case ('RUNNING') { En progreso }
+              @case ('SUCCESS') { Completado }
+              @case ('FAILED') { Fallido }
+            }
+          </span>
+          <span class="job-period">{{ monthLabel(job.targetMonth) }} {{ job.targetYear }}</span>
+          <span class="job-time">Iniciado a las {{ job.startedAt | date: 'HH:mm:ss' }}</span>
+        </div>
+
+        @if (job.status === 'RUNNING') {
+          <mat-progress-bar mode="indeterminate" class="progress-bar" />
+          <p class="running-hint">Analizando buzones de correo, esto puede tardar unos segundos…</p>
+        } @else {
+          <div class="job-stats">
+            <div class="stat">
+              <span class="stat-value">{{ job.emailsIngested }}</span>
+              <span class="stat-label">correos encontrados</span>
+            </div>
+            <div class="stat">
+              <span class="stat-value">{{ job.accountsOk }} / {{ job.accountsTotal }}</span>
+              <span class="stat-label">cuentas procesadas</span>
+            </div>
+            @if (job.accountsFailed > 0) {
+              <div class="stat stat-warn">
+                <mat-icon>warning_amber</mat-icon>
+                <span>{{ job.accountsFailed }} cuenta(s) con error</span>
+              </div>
+            }
+            @if (job.finishedAt) {
+              <div class="stat">
+                <span class="stat-value">{{ job.finishedAt | date: 'HH:mm:ss' }}</span>
+                <span class="stat-label">hora de finalización</span>
+              </div>
+            }
+            @if (job.errorMessage) {
+              <div class="stat stat-error">
+                <mat-icon>error_outline</mat-icon>
+                <span>{{ job.errorMessage }}</span>
+              </div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Results -->
+  @if (emails().length > 0) {
+    <div class="results-header">
+      <h3 class="results-title">
+        <mat-icon>inbox</mat-icon>
+        {{ emails().length }} correo(s) con CFDI
+      </h3>
+    </div>
+    <div class="table-container">
+      <table mat-table [dataSource]="emails()" class="emails-table">
+
+        <ng-container matColumnDef="subject">
+          <th mat-header-cell *matHeaderCellDef>Asunto</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="subject-cell" [matTooltip]="row.subject ?? ''">
+              {{ row.subject ?? '(sin asunto)' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="fromAddress">
+          <th mat-header-cell *matHeaderCellDef>Remitente</th>
+          <td mat-cell *matCellDef="let row">
+            <span class="from-cell">{{ row.fromAddress ?? '—' }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="receivedAt">
+          <th mat-header-cell *matHeaderCellDef>Recibido</th>
+          <td mat-cell *matCellDef="let row">
+            {{ row.receivedAt | date: 'dd/MM/yyyy HH:mm' }}
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="types">
+          <th mat-header-cell *matHeaderCellDef>Archivos</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="type-icons">
+              @if (row.hasXml) {
+                <span class="type-badge xml" matTooltip="Contiene XML">XML</span>
+              }
+              @if (row.hasZip) {
+                <span class="type-badge zip" matTooltip="Contiene ZIP">ZIP</span>
+              }
+              @if (row.hasPdf) {
+                <span class="type-badge pdf" matTooltip="Contiene PDF">PDF</span>
+              }
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="matchReasons">
+          <th mat-header-cell *matHeaderCellDef>Detección</th>
+          <td mat-cell *matCellDef="let row">
+            <mat-chip-set>
+              @for (reason of row.matchReasons; track reason) {
+                <mat-chip class="reason-chip">{{ matchReasonLabel(reason) }}</mat-chip>
+              }
+            </mat-chip-set>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="attachments">
+          <th mat-header-cell *matHeaderCellDef>Adjuntos</th>
+          <td mat-cell *matCellDef="let row">
+            <div class="attachments-cell">
+              <mat-icon class="attach-icon">attach_file</mat-icon>
+              <span>{{ row.attachments.length }}</span>
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      </table>
+    </div>
+  } @else if (jobRun()?.status === 'SUCCESS') {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">inbox</mat-icon>
+      <h3>Sin correos encontrados</h3>
+      <p>No se detectaron correos con CFDIs para {{ monthLabel(jobRun()!.targetMonth) }} {{ jobRun()!.targetYear }}.</p>
+    </div>
+  }
+</div>

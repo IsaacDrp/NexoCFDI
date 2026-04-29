@@ -30,6 +30,11 @@ export const routes: Routes = [
             (m) => m.MailAccountsComponent,
           ),
       },
+      {
+        path: 'ingestion',
+        loadComponent: () =>
+          import('./features/dashboard/ingestion/ingestion').then((m) => m.IngestionComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },
