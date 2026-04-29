@@ -4,10 +4,16 @@
       <h2 class="page-title">Búsqueda de CFDIs</h2>
       <p class="page-subtitle">Busca y revisa los correos con facturas recibidas en un período.</p>
     </div>
-    <button mat-stroked-button class="keywords-btn" (click)="openKeywordConfig()">
-      <mat-icon>tune</mat-icon>
-      Palabras clave
-    </button>
+    <div class="header-actions">
+      <button mat-stroked-button class="manual-btn" (click)="openManualEntry()">
+        <mat-icon>add</mat-icon>
+        CFDI manual
+      </button>
+      <button mat-stroked-button class="keywords-btn" (click)="openKeywordConfig()">
+        <mat-icon>tune</mat-icon>
+        Palabras clave
+      </button>
+    </div>
   </div>
 
   <!-- Search form -->
@@ -150,20 +156,39 @@
     </div>
 
     <div class="table-scroll-wrapper">
-      <table mat-table [dataSource]="emails()" class="emails-table">
+      <table mat-table [dataSource]="emails()" [multiTemplateDataRows]="true" class="emails-table">
+
+        <!-- Expandir -->
+        <ng-container matColumnDef="expand">
+          <th mat-header-cell *matHeaderCellDef class="col-expand"></th>
+          <td mat-cell *matCellDef="let row" class="col-expand">
+            @if (row.processingStatus === 'STORED') {
+              <button mat-icon-button class="expand-btn"
+                      (click)="toggleExpand(row); $event.stopPropagation()"
+                      [matTooltip]="expandedRow() === row ? 'Ocultar detalle' : 'Ver detalle CFDI'">
+                <mat-icon>{{ expandedRow() === row ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            }
+          </td>
+        </ng-container>
 
         <!-- Estado -->
         <ng-container matColumnDef="processingStatus" sticky>
           <th mat-header-cell *matHeaderCellDef class="col-status">Estado</th>
           <td mat-cell *matCellDef="let row" class="col-status">
-            <span [class]="'proc-badge proc-' + row.processingStatus.toLowerCase()"
-                  [matTooltip]="row.processingStatus === 'ERROR' ? (row.errorCause ?? '') : ''">
-              @switch (row.processingStatus) {
-                @case ('STORED')  { <mat-icon class="badge-icon">check_circle</mat-icon> Almacenado }
-                @case ('ERROR')   { <mat-icon class="badge-icon">error</mat-icon> Error }
-                @case ('PENDING') { <mat-icon class="badge-icon">schedule</mat-icon> Pendiente }
+            <div class="status-cell">
+              <span [class]="'proc-badge proc-' + row.processingStatus.toLowerCase()"
+                    [matTooltip]="row.processingStatus === 'ERROR' ? (row.errorCause ?? '') : ''">
+                @switch (row.processingStatus) {
+                  @case ('STORED')  { <mat-icon class="badge-icon">check_circle</mat-icon> Almacenado }
+                  @case ('ERROR')   { <mat-icon class="badge-icon">error</mat-icon> Error }
+                  @case ('PENDING') { <mat-icon class="badge-icon">schedule</mat-icon> Pendiente }
+                }
+              </span>
+              @if (row.source === 'MANUAL') {
+                <span class="source-manual-badge" matTooltip="Ingresado manualmente">Manual</span>
               }
-            </span>
+            </div>
           </td>
         </ng-container>
 
@@ -215,13 +240,17 @@
           <td mat-cell *matCellDef="let row" class="col-types">
             <div class="type-icons">
               @if (row.hasXml) {
-                <span class="type-badge xml" matTooltip="Contiene XML">XML</span>
+                <span class="type-badge xml" matTooltip="Contiene XML"
+                      [class.clickable]="hasStoredAttachment(row, 'xml')"
+                      (click)="hasStoredAttachment(row, 'xml') ? previewFile(row, 'xml') : null; $event.stopPropagation()">XML</span>
               }
               @if (row.hasZip) {
                 <span class="type-badge zip" matTooltip="Contiene ZIP">ZIP</span>
               }
               @if (row.hasPdf) {
-                <span class="type-badge pdf" matTooltip="Contiene PDF">PDF</span>
+                <span class="type-badge pdf" matTooltip="Contiene PDF"
+                      [class.clickable]="hasStoredAttachment(row, 'pdf')"
+                      (click)="hasStoredAttachment(row, 'pdf') ? previewFile(row, 'pdf') : null; $event.stopPropagation()">PDF</span>
               }
             </div>
           </td>
@@ -270,9 +299,65 @@
           </td>
         </ng-container>
 
+        <!-- Acciones por fila -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef class="col-actions"></th>
+          <td mat-cell *matCellDef="let row" class="col-actions">
+            <button mat-icon-button class="row-edit-btn"
+                    (click)="openEditEntry(row); $event.stopPropagation()"
+                    matTooltip="Editar datos de facturación">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <!-- Detalle CFDI (fila expandible) -->
+        <ng-container matColumnDef="expandedDetail">
+          <td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length" class="detail-cell">
+            @if (expandedRow() === row) {
+              <div class="cfdi-detail-panel">
+                <div class="cfdi-detail-grid">
+                  <div class="detail-field">
+                    <span class="detail-label">UUID</span>
+                    <span class="detail-value mono">{{ row.cfdiUuid ?? '—' }}</span>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-label">RFC Emisor</span>
+                    <span class="detail-value mono">{{ row.cfdiRfcEmisor ?? '—' }}</span>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-label">Nombre Emisor</span>
+                    <span class="detail-value">{{ row.cfdiNombreEmisor ?? '—' }}</span>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-label">Fecha CFDI</span>
+                    <span class="detail-value">{{ row.cfdiFecha ? (row.cfdiFecha | date:'dd/MM/yyyy HH:mm') : '—' }}</span>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-label">Subtotal</span>
+                    <span class="detail-value">{{ row.cfdiSubtotal != null ? (row.cfdiSubtotal | currency:'MXN':'symbol':'1.2-2') : '—' }}</span>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-label">IVA</span>
+                    <span class="detail-value">{{ row.cfdiIva != null ? (row.cfdiIva | currency:'MXN':'symbol':'1.2-2') : '—' }}</span>
+                  </div>
+                  <div class="detail-field">
+                    <span class="detail-label">Total</span>
+                    <span class="detail-value total-value">{{ row.cfdiTotal != null ? (row.cfdiTotal | currency:'MXN':'symbol':'1.2-2') : '—' }}</span>
+                  </div>
+                </div>
+              </div>
+            }
+          </td>
+        </ng-container>
+
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"
-            [class.row-error]="row.processingStatus === 'ERROR'"></tr>
+            [class.row-error]="row.processingStatus === 'ERROR'"
+            [class.row-expandable]="row.processingStatus === 'STORED'"
+            [class.row-expanded]="expandedRow() === row"
+            (click)="toggleExpand(row)"></tr>
+        <tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
       </table>
     </div>
 

@@ -1,8 +1,10 @@
 package mx.synectura.nexo_cfdi.modules.storage.infrastructure;
 
+import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
+import io.minio.http.Method;
 import lombok.extern.slf4j.Slf4j;
 import mx.synectura.nexo_cfdi.modules.storage.api.DocumentStoragePort;
 import org.springframework.beans.factory.annotation.Value;
@@ -58,6 +60,24 @@ public class MinioStorageAdapter implements DocumentStoragePort {
         } catch (Exception e) {
             log.error("MINIO_DELETE_FAIL bucket={} key={} causa={}", bucket, objectKey, e.getMessage(), e);
             throw new RuntimeException("Error al eliminar objeto de MinIO: " + objectKey, e);
+        }
+    }
+
+    @Override
+    public String getPresignedUrl(String objectKey) {
+        log.debug("MINIO_PRESIGNED_INICIO bucket={} key={}", bucket, objectKey);
+        try {
+            return minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .method(Method.GET)
+                            .bucket(bucket)
+                            .object(objectKey)
+                            .expiry(3600) // 1 hora
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("MINIO_PRESIGNED_FAIL bucket={} key={} causa={}", bucket, objectKey, e.getMessage(), e);
+            throw new RuntimeException("Error al generar URL prefirmada para: " + objectKey, e);
         }
     }
 }

@@ -7,12 +7,15 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.EmailProcessingStatus;
+import mx.synectura.nexo_cfdi.modules.ingestion.domain.IngestedEmailSource;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.MatchReason;
 import mx.synectura.nexo_cfdi.shared.domain.user.persistence.UserEntity;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -39,14 +42,14 @@ public class IngestedEmailEntity {
     private UserEntity user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "mail_account_id", nullable = false)
+    @JoinColumn(name = "mail_account_id")
     private MailAccountEntity mailAccount;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "job_run_id", nullable = false)
+    @JoinColumn(name = "job_run_id")
     private IngestionJobRunEntity jobRun;
 
-    @Column(name = "message_id", nullable = false, length = 512)
+    @Column(name = "message_id", length = 512)
     private String messageId;
 
     @Column(name = "subject", columnDefinition = "TEXT")
@@ -80,6 +83,28 @@ public class IngestedEmailEntity {
 
     @Column(name = "cfdi_uuid", length = 36)
     private String cfdiUuid;
+
+    @Column(name = "cfdi_rfc_emisor", length = 13)
+    private String cfdiRfcEmisor;
+
+    @Column(name = "cfdi_nombre_emisor", length = 300)
+    private String cfdiNombreEmisor;
+
+    @Column(name = "cfdi_fecha")
+    private LocalDateTime cfdiFecha;
+
+    @Column(name = "cfdi_subtotal", precision = 15, scale = 2)
+    private BigDecimal cfdiSubtotal;
+
+    @Column(name = "cfdi_iva", precision = 15, scale = 2)
+    private BigDecimal cfdiIva;
+
+    @Column(name = "cfdi_total", precision = 15, scale = 2)
+    private BigDecimal cfdiTotal;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source", nullable = false, length = 10)
+    private IngestedEmailSource source = IngestedEmailSource.EMAIL;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

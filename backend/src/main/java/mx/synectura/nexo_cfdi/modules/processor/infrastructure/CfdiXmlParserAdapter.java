@@ -11,6 +11,8 @@ import org.w3c.dom.NodeList;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.ByteArrayInputStream;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Component
 @Slf4j
@@ -45,6 +47,10 @@ public class CfdiXmlParserAdapter implements CfdiParserPort {
 
             String rfcReceptor = requireAttr(doc, "Receptor", "Rfc");
             String rfcEmisor   = requireAttr(doc, "Emisor",   "Rfc");
+            NodeList emisorNodes = doc.getElementsByTagNameNS("*", "Emisor");
+            String nombreEmisor = emisorNodes.getLength() > 0
+                    ? attrOrNull(emisorNodes.item(0), "Nombre") : null;
+            if (nombreEmisor != null) nombreEmisor = nombreEmisor.trim();
 
             NodeList tfdNodes = doc.getElementsByTagNameNS("*", "TimbreFiscalDigital");
             String uuid = tfdNodes.getLength() > 0
@@ -56,10 +62,32 @@ public class CfdiXmlParserAdapter implements CfdiParserPort {
                         rfcReceptor, rfcEmisor);
             }
 
-            log.info("CFDI_PARSE_OK version={} rfcReceptor={} rfcEmisor={} uuid={}",
-                    version, rfcReceptor, rfcEmisor, uuid);
+            LocalDateTime fecha = null;
+            String fechaStr = attrOrNull(doc.getDocumentElement(), "Fecha");
+            if (fechaStr != null) {
+                try { fecha = LocalDateTime.parse(fechaStr); } catch (Exception ex) {
+                    log.debug("CFDI_FECHA_PARSE_FAIL value={}", fechaStr);
+                }
+            }
 
-            return new CfdiData(rfcEmisor, rfcReceptor, uuid);
+            BigDecimal subtotal = parseBigDecimal(attrOrNull(doc.getDocumentElement(), "SubTotal"));
+            BigDecimal total    = parseBigDecimal(attrOrNull(doc.getDocumentElement(), "Total"));
+
+            // Root-level Impuestos carries TotalImpuestosTrasladados; concept-level ones don't.
+            BigDecimal iva = null;
+            NodeList impNodes = doc.getElementsByTagNameNS("*", "Impuestos");
+            for (int i = 0; i < impNodes.getLength(); i++) {
+                String ivaStr = attrOrNull(impNodes.item(i), "TotalImpuestosTrasladados");
+                if (ivaStr != null) {
+                    iva = parseBigDecimal(ivaStr);
+                    break;
+                }
+            }
+
+            log.info("CFDI_PARSE_OK version={} rfcReceptor={} rfcEmisor={} nombreEmisor={} uuid={} fecha={} subtotal={} iva={} total={}",
+                    version, rfcReceptor, rfcEmisor, nombreEmisor, uuid, fecha, subtotal, iva, total);
+
+            return new CfdiData(rfcEmisor, rfcReceptor, uuid, fecha, subtotal, iva, total, nombreEmisor);
 
         } catch (CfdiParseException e) {
             log.warn("CFDI_PARSE_FAIL causa={}", e.getMessage());
@@ -85,5 +113,13 @@ public class CfdiXmlParserAdapter implements CfdiParserPort {
     private String attrOrNull(org.w3c.dom.Node node, String attrName) {
         org.w3c.dom.Node attr = node.getAttributes().getNamedItem(attrName);
         return attr == null ? null : attr.getNodeValue();
+    }
+
+    private BigDecimal parseBigDecimal(String value) {
+        if (value == null || value.isBlank()) return null;
+        try { return new BigDecimal(value.trim()); } catch (NumberFormatException ex) {
+            log.debug("CFDI_DECIMAL_PARSE_FAIL value={}", value);
+            return null;
+        }
     }
 }

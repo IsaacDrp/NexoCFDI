@@ -2,8 +2,10 @@ package mx.synectura.nexo_cfdi.modules.ingestion.application.dto;
 
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.EmailProcessingStatus;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.IngestedEmail;
+import mx.synectura.nexo_cfdi.modules.ingestion.domain.IngestedEmailSource;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.MatchReason;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
@@ -23,9 +25,17 @@ public record IngestedEmailResponse(
         List<AttachmentInfo> attachments,
         EmailProcessingStatus processingStatus,
         String errorCause,
-        String cfdiUuid
+        String cfdiUuid,
+        String cfdiRfcEmisor,
+        String cfdiNombreEmisor,
+        String cfdiFecha,
+        BigDecimal cfdiSubtotal,
+        BigDecimal cfdiIva,
+        BigDecimal cfdiTotal,
+        IngestedEmailSource source
 ) {
     public record AttachmentInfo(
+            UUID id,
             String filename,
             String extension,
             long sizeBytes,
@@ -37,13 +47,20 @@ public record IngestedEmailResponse(
 
     public static IngestedEmailResponse from(IngestedEmail e) {
         List<AttachmentInfo> atts = e.attachments().stream()
-                .map(a -> new AttachmentInfo(a.filename(), a.extension(), a.sizeBytes(),
+                .map(a -> new AttachmentInfo(a.id(), a.filename(), a.extension(), a.sizeBytes(),
                         a.insideZip(), a.parentZipName(), a.depth(), a.storageKey()))
                 .toList();
         return new IngestedEmailResponse(
                 e.id(), e.mailAccountId(), e.messageId(), e.subject(),
                 e.fromAddress(), e.receivedAt(), e.hasZip(), e.hasXml(), e.hasPdf(),
                 e.matchReasons(), atts,
-                e.processingStatus(), e.errorCause(), e.cfdiUuid());
+                e.processingStatus(), e.errorCause(), e.cfdiUuid(),
+                e.cfdiRfcEmisor(),
+                e.cfdiNombreEmisor(),
+                e.cfdiFecha() != null ? e.cfdiFecha().toString() : null,
+                e.cfdiSubtotal(),
+                e.cfdiIva(),
+                e.cfdiTotal(),
+                e.source() != null ? e.source() : IngestedEmailSource.EMAIL);
     }
 }

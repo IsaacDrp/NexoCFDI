@@ -1,5 +1,7 @@
 package mx.synectura.nexo_cfdi.modules.ingestion.domain;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
@@ -22,5 +24,12 @@ public record IngestedEmail(
         OffsetDateTime createdAt,
         EmailProcessingStatus processingStatus,
         String errorCause,
-        String cfdiUuid
+        String cfdiUuid,
+        String cfdiRfcEmisor,
+        String cfdiNombreEmisor,
+        LocalDateTime cfdiFecha,
+        BigDecimal cfdiSubtotal,
+        BigDecimal cfdiIva,
+        BigDecimal cfdiTotal,
+        IngestedEmailSource source
 ) {}

@@ -1,5 +1,5 @@
 import { Component, NgZone, OnDestroy, computed, inject, signal } from '@angular/core';
-import { DatePipe, LowerCasePipe, SlicePipe } from '@angular/common';
+import { CurrencyPipe, DatePipe, LowerCasePipe, SlicePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, interval, switchMap, takeWhile, tap } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,6 +21,7 @@ import {
   JobRunResponse,
 } from '../../../core/models/ingestion.model';
 import { KeywordConfigDialogComponent } from './keyword-config-dialog/keyword-config-dialog';
+import { ManualCfdiDialogComponent } from './manual-cfdi-dialog/manual-cfdi-dialog';
 
 interface ApiError {
   message: string;
@@ -30,6 +31,7 @@ interface ApiError {
 @Component({
   selector: 'app-ingestion',
   imports: [
+    CurrencyPipe,
     DatePipe,
     LowerCasePipe,
     SlicePipe,
@@ -76,14 +78,16 @@ export class IngestionComponent implements OnDestroy {
   selectedMonth = signal(new Date().getMonth() + 1);
   selectedYear  = signal(this.currentYear);
 
-  triggering = signal(false);
-  jobRun     = signal<JobRunResponse | null>(null);
-  emails     = signal<IngestedEmailResponse[]>([]);
-  apiError   = signal<ApiError | null>(null);
+  triggering   = signal(false);
+  jobRun       = signal<JobRunResponse | null>(null);
+  emails       = signal<IngestedEmailResponse[]>([]);
+  apiError     = signal<ApiError | null>(null);
+  expandedRow  = signal<IngestedEmailResponse | null>(null);
 
   readonly isRunning = computed(() => this.jobRun()?.status === 'RUNNING');
 
   readonly displayedColumns = [
+    'expand',
     'processingStatus',
     'subject',
     'fromAddress',
@@ -93,10 +97,17 @@ export class IngestionComponent implements OnDestroy {
     'matchReasons',
     'errorCause',
     'attachments',
+    'actions',
   ];
+
+  toggleExpand(row: IngestedEmailResponse): void {
+    if (row.processingStatus !== 'STORED') return;
+    this.expandedRow.set(this.expandedRow() === row ? null : row);
+  }
 
   search() {
     this.stopPolling();
+    this.expandedRow.set(null);
     this.jobRun.set(null);
     this.emails.set([]);
     this.apiError.set(null);
@@ -178,6 +189,62 @@ export class IngestionComponent implements OnDestroy {
 
   openKeywordConfig() {
     this.dialog.open(KeywordConfigDialogComponent, { width: '660px', maxHeight: '90vh' });
+  }
+
+  openManualEntry() {
+    const ref = this.dialog.open(ManualCfdiDialogComponent, {
+      width: '600px',
+      maxHeight: '90vh',
+      data: { year: this.selectedYear(), month: this.selectedMonth() },
+    });
+    ref.afterClosed().subscribe((result: IngestedEmailResponse | null | undefined) => {
+      if (result) {
+        this.emails.update((list) => [result, ...list]);
+        this.snackBar.open('CFDI manual agregado correctamente', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  openEditEntry(row: IngestedEmailResponse) {
+    const ref = this.dialog.open(ManualCfdiDialogComponent, {
+      width: '600px',
+      maxHeight: '90vh',
+      data: {
+        year: this.selectedYear(),
+        month: this.selectedMonth(),
+        editMode: true,
+        email: row,
+      },
+    });
+    ref.afterClosed().subscribe((result: IngestedEmailResponse | null | undefined) => {
+      if (result) {
+        this.emails.update((list) =>
+          list.map((e) => (e.id === result.id ? result : e))
+        );
+        this.snackBar.open('CFDI actualizado correctamente', 'Cerrar', { duration: 3000 });
+      }
+    });
+  }
+
+  hasStoredAttachment(row: IngestedEmailResponse, type: 'pdf' | 'xml'): boolean {
+    return row.attachments.some(a => a.extension.toLowerCase() === type && a.storageKey != null);
+  }
+
+  previewFile(row: IngestedEmailResponse, type: 'pdf' | 'xml') {
+    const attachment = row.attachments.find(a => a.extension.toLowerCase() === type && a.storageKey != null);
+    if (!attachment) {
+      this.snackBar.open(`No hay archivo ${type.toUpperCase()} disponible para previsualizar.`, 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    this.ingestionService.getAttachmentPreviewUrl(row.id, attachment.id).subscribe({
+      next: (res) => {
+        window.open(res.url, '_blank');
+      },
+      error: () => {
+        this.snackBar.open('Error al generar la vista previa.', 'Cerrar', { duration: 3000 });
+      }
+    });
   }
 
   ngOnDestroy() {
