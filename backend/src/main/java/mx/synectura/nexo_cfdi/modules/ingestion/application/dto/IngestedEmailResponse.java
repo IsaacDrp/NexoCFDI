@@ -1,5 +1,6 @@
 package mx.synectura.nexo_cfdi.modules.ingestion.application.dto;
 
+import mx.synectura.nexo_cfdi.modules.ingestion.domain.EmailProcessingStatus;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.IngestedEmail;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.MatchReason;
 
@@ -19,7 +20,10 @@ public record IngestedEmailResponse(
         boolean hasXml,
         boolean hasPdf,
         Set<MatchReason> matchReasons,
-        List<AttachmentInfo> attachments
+        List<AttachmentInfo> attachments,
+        EmailProcessingStatus processingStatus,
+        String errorCause,
+        String cfdiUuid
 ) {
     public record AttachmentInfo(
             String filename,
@@ -27,16 +31,19 @@ public record IngestedEmailResponse(
             long sizeBytes,
             boolean insideZip,
             String parentZipName,
-            int depth
+            int depth,
+            String storageKey
     ) {}
 
     public static IngestedEmailResponse from(IngestedEmail e) {
         List<AttachmentInfo> atts = e.attachments().stream()
                 .map(a -> new AttachmentInfo(a.filename(), a.extension(), a.sizeBytes(),
-                        a.insideZip(), a.parentZipName(), a.depth()))
+                        a.insideZip(), a.parentZipName(), a.depth(), a.storageKey()))
                 .toList();
-        return new IngestedEmailResponse(e.id(), e.mailAccountId(), e.messageId(), e.subject(),
+        return new IngestedEmailResponse(
+                e.id(), e.mailAccountId(), e.messageId(), e.subject(),
                 e.fromAddress(), e.receivedAt(), e.hasZip(), e.hasXml(), e.hasPdf(),
-                e.matchReasons(), atts);
+                e.matchReasons(), atts,
+                e.processingStatus(), e.errorCause(), e.cfdiUuid());
     }
 }

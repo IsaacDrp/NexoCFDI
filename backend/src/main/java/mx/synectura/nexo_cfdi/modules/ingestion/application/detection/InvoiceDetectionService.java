@@ -1,5 +1,6 @@
 package mx.synectura.nexo_cfdi.modules.ingestion.application.detection;
 
+import lombok.extern.slf4j.Slf4j;
 import mx.synectura.nexo_cfdi.modules.ingestion.api.RawEmailMessage;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.IngestedAttachment;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.KeywordType;
@@ -28,6 +29,7 @@ import java.util.UUID;
  * se descarta aunque cumpla otras reglas.
  */
 @Service
+@Slf4j
 public class InvoiceDetectionService {
 
     private final ZipScanner zipScanner;
@@ -45,11 +47,13 @@ public class InvoiceDetectionService {
         String haystack = buildHaystack(msg);
 
         if (matchesSenderExclude(msg.fromAddress(), userKeywords)) {
+            log.debug("DETECT_EXCLUIDO_SENDER msgId={} from={}", msg.messageId(), msg.fromAddress());
             return new DetectionResult(false, EnumSet.noneOf(MatchReason.class),
                     false, false, false, List.of());
         }
 
         if (matchesExclude(haystack, userKeywords)) {
+            log.debug("DETECT_EXCLUIDO_KEYWORD msgId={} subject=\"{}\"", msg.messageId(), msg.subject());
             return new DetectionResult(false, EnumSet.noneOf(MatchReason.class),
                     false, false, false, List.of());
         }
@@ -68,19 +72,19 @@ public class InvoiceDetectionService {
             if ("zip".equals(ext)) {
                 hasZip = true;
                 attachments.add(new IngestedAttachment(null, null, filename, "zip",
-                        att.content().length, false, null, 0, null));
+                        att.content().length, false, null, 0, null, null));
                 List<ZipScanner.ScannedFile> inner = zipScanner.scan(filename, att.content());
                 for (ZipScanner.ScannedFile sf : inner) {
                     if ("xml".equals(sf.extension())) hasXml = true;
                     if ("pdf".equals(sf.extension())) hasPdf = true;
                     attachments.add(new IngestedAttachment(null, null, sf.filename(), sf.extension(),
-                            sf.sizeBytes(), sf.insideZip(), sf.parentZipName(), sf.depth(), null));
+                            sf.sizeBytes(), sf.insideZip(), sf.parentZipName(), sf.depth(), null, null));
                 }
             } else {
                 if ("xml".equals(ext)) hasXml = true;
                 if ("pdf".equals(ext)) hasPdf = true;
                 attachments.add(new IngestedAttachment(null, null, filename, ext,
-                        att.content().length, false, null, 0, null));
+                        att.content().length, false, null, 0, null, null));
             }
         }
 
@@ -94,6 +98,13 @@ public class InvoiceDetectionService {
         if (matchesSenderInclude(msg.fromAddress(), userKeywords)) reasons.add(MatchReason.SENDER_MATCH);
 
         boolean isInvoice = !reasons.isEmpty();
+        if (isInvoice) {
+            log.debug("DETECT_FACTURA msgId={} razones={} hasXml={} hasPdf={} hasZip={} adjuntos={}",
+                    msg.messageId(), reasons, hasXml, hasPdf, hasZip, attachments.size());
+        } else {
+            log.debug("DETECT_NO_FACTURA msgId={} from={} adjuntos={}",
+                    msg.messageId(), msg.fromAddress(), attachments.size());
+        }
         return new DetectionResult(isInvoice, reasons, hasZip, hasXml, hasPdf, attachments);
     }
 
@@ -168,7 +179,7 @@ public class InvoiceDetectionService {
         public List<IngestedAttachment> attachmentsFor(UUID ingestedEmailId) {
             return attachments.stream()
                     .map(a -> new IngestedAttachment(null, ingestedEmailId, a.filename(), a.extension(),
-                            a.sizeBytes(), a.insideZip(), a.parentZipName(), a.depth(), null))
+                            a.sizeBytes(), a.insideZip(), a.parentZipName(), a.depth(), null, null))
                     .toList();
         }
     }

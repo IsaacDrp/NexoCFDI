@@ -34,6 +34,43 @@ public class ZipScanner {
         return result;
     }
 
+    /** Como {@link #scan} pero incluye el contenido binario de cada archivo. */
+    public List<ExtractedFile> extract(String zipFilename, byte[] zipBytes) {
+        List<ExtractedFile> result = new ArrayList<>();
+        extractInternal(zipFilename, zipBytes, 1, result, 0L);
+        return result;
+    }
+
+    private long extractInternal(String parentZipName, byte[] zipBytes, int depth,
+                                 List<ExtractedFile> result, long accumulatedBytes) {
+        if (depth > maxDepth) {
+            log.warn("Profundidad máxima de zip alcanzada ({}), omitiendo {}", maxDepth, parentZipName);
+            return accumulatedBytes;
+        }
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.isDirectory()) continue;
+                byte[] entryBytes = readEntry(zis);
+                accumulatedBytes += entryBytes.length;
+                if (accumulatedBytes > maxUncompressedBytes) {
+                    log.warn("Tamaño descomprimido excede límite ({} bytes) para {}, abortando", maxUncompressedBytes, parentZipName);
+                    return accumulatedBytes;
+                }
+                String entryName = entry.getName();
+                if (isZip(entryName)) {
+                    accumulatedBytes = extractInternal(entryName, entryBytes, depth + 1, result, accumulatedBytes);
+                } else {
+                    result.add(new ExtractedFile(entryName, extensionOf(entryName),
+                            entryBytes, true, parentZipName, depth));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error extrayendo zip {}: {}", parentZipName, e.getMessage());
+        }
+        return accumulatedBytes;
+    }
+
     private long scanInternal(String parentZipName, byte[] zipBytes, int depth,
                               List<ScannedFile> result, long accumulatedBytes) {
         if (depth > maxDepth) {
@@ -90,6 +127,15 @@ public class ZipScanner {
             String filename,
             String extension,
             long sizeBytes,
+            boolean insideZip,
+            String parentZipName,
+            int depth
+    ) {}
+
+    public record ExtractedFile(
+            String filename,
+            String extension,
+            byte[] content,
             boolean insideZip,
             String parentZipName,
             int depth

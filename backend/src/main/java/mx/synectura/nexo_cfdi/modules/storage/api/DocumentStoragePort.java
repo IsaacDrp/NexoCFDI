@@ -1,9 +1,7 @@
 package mx.synectura.nexo_cfdi.modules.storage.api;
 
-import java.io.InputStream;
-
 public interface DocumentStoragePort {
-    String upload(String fileName, InputStream content, String contentType);
-    InputStream download(String fileId);
-    void delete(String fileId);
+    /** Sube contenido al blob store y devuelve el objectKey usado. */
+    String store(String objectKey, byte[] content, String contentType);
+    void remove(String objectKey);
 }

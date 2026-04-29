@@ -100,6 +100,18 @@
               <span class="stat-value">{{ job.emailsIngested }}</span>
               <span class="stat-label">correos encontrados</span>
             </div>
+            @if (emails().length > 0) {
+              <div class="stat">
+                <span class="stat-value stat-value-stored">{{ storedCount() }}</span>
+                <span class="stat-label">almacenados</span>
+              </div>
+              @if (errorCount() > 0) {
+                <div class="stat">
+                  <span class="stat-value stat-value-error">{{ errorCount() }}</span>
+                  <span class="stat-label">con error</span>
+                </div>
+              }
+            }
             <div class="stat">
               <span class="stat-value">{{ job.accountsOk }} / {{ job.accountsTotal }}</span>
               <span class="stat-label">cuentas procesadas</span>
@@ -136,35 +148,71 @@
         {{ emails().length }} correo(s) con CFDI
       </h3>
     </div>
-    <div class="table-container">
+
+    <div class="table-scroll-wrapper">
       <table mat-table [dataSource]="emails()" class="emails-table">
 
+        <!-- Estado -->
+        <ng-container matColumnDef="processingStatus" sticky>
+          <th mat-header-cell *matHeaderCellDef class="col-status">Estado</th>
+          <td mat-cell *matCellDef="let row" class="col-status">
+            <span [class]="'proc-badge proc-' + row.processingStatus.toLowerCase()"
+                  [matTooltip]="row.processingStatus === 'ERROR' ? (row.errorCause ?? '') : ''">
+              @switch (row.processingStatus) {
+                @case ('STORED')  { <mat-icon class="badge-icon">check_circle</mat-icon> Almacenado }
+                @case ('ERROR')   { <mat-icon class="badge-icon">error</mat-icon> Error }
+                @case ('PENDING') { <mat-icon class="badge-icon">schedule</mat-icon> Pendiente }
+              }
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Asunto -->
         <ng-container matColumnDef="subject">
-          <th mat-header-cell *matHeaderCellDef>Asunto</th>
-          <td mat-cell *matCellDef="let row">
-            <span class="subject-cell" [matTooltip]="row.subject ?? ''">
+          <th mat-header-cell *matHeaderCellDef class="col-subject">Asunto</th>
+          <td mat-cell *matCellDef="let row" class="col-subject">
+            <span class="truncate-cell" [matTooltip]="row.subject ?? ''">
               {{ row.subject ?? '(sin asunto)' }}
             </span>
           </td>
         </ng-container>
 
+        <!-- Remitente -->
         <ng-container matColumnDef="fromAddress">
-          <th mat-header-cell *matHeaderCellDef>Remitente</th>
-          <td mat-cell *matCellDef="let row">
-            <span class="from-cell">{{ row.fromAddress ?? '—' }}</span>
+          <th mat-header-cell *matHeaderCellDef class="col-from">Remitente</th>
+          <td mat-cell *matCellDef="let row" class="col-from">
+            <span class="truncate-cell muted" [matTooltip]="row.fromAddress ?? ''">
+              {{ row.fromAddress ?? '—' }}
+            </span>
           </td>
         </ng-container>
 
+        <!-- Recibido -->
         <ng-container matColumnDef="receivedAt">
-          <th mat-header-cell *matHeaderCellDef>Recibido</th>
-          <td mat-cell *matCellDef="let row">
-            {{ row.receivedAt | date: 'dd/MM/yyyy HH:mm' }}
+          <th mat-header-cell *matHeaderCellDef class="col-date">Recibido</th>
+          <td mat-cell *matCellDef="let row" class="col-date">
+            {{ row.receivedAt | date: 'dd/MM/yy HH:mm' }}
           </td>
         </ng-container>
 
+        <!-- UUID CFDI -->
+        <ng-container matColumnDef="cfdiUuid">
+          <th mat-header-cell *matHeaderCellDef class="col-uuid">UUID CFDI</th>
+          <td mat-cell *matCellDef="let row" class="col-uuid">
+            @if (row.cfdiUuid) {
+              <span class="uuid-cell" [matTooltip]="row.cfdiUuid">
+                {{ row.cfdiUuid | slice: 0 : 8 }}…
+              </span>
+            } @else {
+              <span class="muted">—</span>
+            }
+          </td>
+        </ng-container>
+
+        <!-- Archivos -->
         <ng-container matColumnDef="types">
-          <th mat-header-cell *matHeaderCellDef>Archivos</th>
-          <td mat-cell *matCellDef="let row">
+          <th mat-header-cell *matHeaderCellDef class="col-types">Archivos</th>
+          <td mat-cell *matCellDef="let row" class="col-types">
             <div class="type-icons">
               @if (row.hasXml) {
                 <span class="type-badge xml" matTooltip="Contiene XML">XML</span>
@@ -179,9 +227,10 @@
           </td>
         </ng-container>
 
+        <!-- Detección -->
         <ng-container matColumnDef="matchReasons">
-          <th mat-header-cell *matHeaderCellDef>Detección</th>
-          <td mat-cell *matCellDef="let row">
+          <th mat-header-cell *matHeaderCellDef class="col-reasons">Detección</th>
+          <td mat-cell *matCellDef="let row" class="col-reasons">
             <mat-chip-set>
               @for (reason of row.matchReasons; track reason) {
                 <mat-chip class="reason-chip">{{ matchReasonLabel(reason) }}</mat-chip>
@@ -190,20 +239,43 @@
           </td>
         </ng-container>
 
+        <!-- Causa de error -->
+        <ng-container matColumnDef="errorCause">
+          <th mat-header-cell *matHeaderCellDef class="col-error">Causa de error</th>
+          <td mat-cell *matCellDef="let row" class="col-error">
+            @if (row.errorCause) {
+              <span class="error-cause-cell" [matTooltip]="row.errorCause">
+                {{ row.errorCause }}
+              </span>
+            } @else {
+              <span class="muted">—</span>
+            }
+          </td>
+        </ng-container>
+
+        <!-- Adjuntos -->
         <ng-container matColumnDef="attachments">
-          <th mat-header-cell *matHeaderCellDef>Adjuntos</th>
-          <td mat-cell *matCellDef="let row">
+          <th mat-header-cell *matHeaderCellDef class="col-attach">Adjuntos</th>
+          <td mat-cell *matCellDef="let row" class="col-attach">
             <div class="attachments-cell">
               <mat-icon class="attach-icon">attach_file</mat-icon>
               <span>{{ row.attachments.length }}</span>
+              @if (storedAttachments(row) > 0) {
+                <span class="stored-count"
+                      [matTooltip]="storedAttachments(row) + ' almacenado(s) en blob'">
+                  <mat-icon class="cloud-icon">cloud_done</mat-icon>{{ storedAttachments(row) }}
+                </span>
+              }
             </div>
           </td>
         </ng-container>
 
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+            [class.row-error]="row.processingStatus === 'ERROR'"></tr>
       </table>
     </div>
+
   } @else if (jobRun()?.status === 'SUCCESS') {
     <div class="empty-state">
       <mat-icon class="empty-icon">inbox</mat-icon>

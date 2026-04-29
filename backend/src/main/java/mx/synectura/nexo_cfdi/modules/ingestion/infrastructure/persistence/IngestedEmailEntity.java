@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import mx.synectura.nexo_cfdi.modules.ingestion.domain.EmailProcessingStatus;
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.MatchReason;
 import mx.synectura.nexo_cfdi.shared.domain.user.persistence.UserEntity;
 import org.hibernate.annotations.CreationTimestamp;
@@ -69,6 +70,16 @@ public class IngestedEmailEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "match_reasons", nullable = false, columnDefinition = "jsonb")
     private String matchReasonsJson = "[]";
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "processing_status", nullable = false, length = 20)
+    private EmailProcessingStatus processingStatus = EmailProcessingStatus.PENDING;
+
+    @Column(name = "error_cause", columnDefinition = "TEXT")
+    private String errorCause;
+
+    @Column(name = "cfdi_uuid", length = 36)
+    private String cfdiUuid;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

@@ -42,6 +42,9 @@ public class IngestedAttachmentEntity {
     @Column(name = "depth", nullable = false)
     private short depth;
 
+    @Column(name = "storage_key", length = 1024)
+    private String storageKey;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;

@@ -12,5 +12,6 @@ public record IngestedAttachment(
         boolean insideZip,
         String parentZipName,
         int depth,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        String storageKey
 ) {}
