@@ -1,0 +1,161 @@
+name: NexoCFDI CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - sit
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+      - sit
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # ── BACKEND UNIT TESTS ──────────────────────────────────────────
+  test-backend:
+    name: Test Backend (Spring Boot)
+    runs-on: ubuntu-latest
+
+    services:
+      # Levantamos PostgreSQL para permitir que las pruebas de contexto de Spring Boot se ejecuten con éxito
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: nexocfdi
+          POSTGRES_USER: nexo
+          POSTGRES_PASSWORD: nexo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Run Unit Tests
+        working-directory: ./backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: nexocfdi
+          DB_USERNAME: nexo
+          DB_PASSWORD: nexo
+          TOKEN_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+        run: |
+          chmod +x gradlew
+          ./gradlew test --no-daemon
+
+  # ── FRONTEND UNIT TESTS ─────────────────────────────────────────
+  test-frontend:
+    name: Test Frontend (Angular)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ./frontend/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run Unit Tests
+        working-directory: ./frontend
+        run: npm run test -- --watch=false
+
+  # ── BUILD AND PUBLISH IMAGES TO GHCR ────────────────────────────
+  build-and-publish:
+    name: Build & Publish Images
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/sit' || startsWith(github.ref, 'refs/tags/v'))
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Configurar etiquetas de Docker para Backend ─────────────
+      - name: Extract Backend Metadata
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/nexocfdi-backend
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+            type=raw,value=sit,enable=${{ github.ref == 'refs/heads/sit' }}
+            type=ref,event=tag
+            type=raw,value=prod,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      # ── Configurar etiquetas de Docker para Frontend ────────────
+      - name: Extract Frontend Metadata
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/nexocfdi-frontend
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+            type=raw,value=sit,enable=${{ github.ref == 'refs/heads/sit' }}
+            type=ref,event=tag
+            type=raw,value=prod,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+
+      # ── Compilar y subir Backend ────────────────────────────────
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ id.meta-backend.outputs.tags || steps.meta-backend.outputs.tags }}
+          labels: ${{ id.meta-backend.outputs.labels || steps.meta-backend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ── Compilar y subir Frontend ───────────────────────────────
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ id.meta-frontend.outputs.tags || steps.meta-frontend.outputs.tags }}
+          labels: ${{ id.meta-frontend.outputs.labels || steps.meta-frontend.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

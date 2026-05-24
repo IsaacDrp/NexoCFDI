@@ -1,0 +1,62 @@
+services:
+  postgres-sit:
+    image: postgres:16-alpine
+    container_name: postgres-sit
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-nexocfdi_sit}
+      POSTGRES_USER: ${DB_USERNAME:-nexo_sit}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - /home/usuario/nexocfdi/sit/postgres_data:/var/lib/postgresql/data
+    networks:
+      - nexocfdi-sit-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-nexo_sit} -d ${DB_NAME:-nexocfdi_sit}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend-sit:
+    image: ghcr.io/${GITHUB_ACTOR}/nexocfdi-backend:sit
+    container_name: backend-sit
+    restart: unless-stopped
+    depends_on:
+      postgres-sit:
+        condition: service_healthy
+    ports:
+      - "${HOST_PORT_BACKEND:-8081}:8080"
+    environment:
+      DB_HOST: postgres-sit
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-nexocfdi_sit}
+      DB_USERNAME: ${DB_USERNAME:-nexo_sit}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SERVER_PORT: 8080
+      SHOW_SQL: ${SHOW_SQL:-true}
+      POLLING_INTERVAL_MINUTES: ${POLLING_INTERVAL_MINUTES:-15}
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
+      AZURE_REDIRECT_URI: ${AZURE_REDIRECT_URI}
+      AZURE_LOGIN_CLIENT_ID: ${AZURE_LOGIN_CLIENT_ID}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-https://blob.paydibujos.com}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET:-nexocfdi-sit}
+    networks:
+      - nexocfdi-sit-net
+
+  frontend-sit:
+    image: ghcr.io/${GITHUB_ACTOR}/nexocfdi-frontend:sit
+    container_name: frontend-sit
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT_FRONTEND:-81}:80"
+    networks:
+      - nexocfdi-sit-net
+
+networks:
+  nexocfdi-sit-net:
+    name: nexocfdi-sit-net
+    driver: bridge
