@@ -3,10 +3,11 @@ import { RouterOutlet } from '@angular/router';
 import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { ToastHostComponent } from './core/ui/toast/toast.component';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ToastHostComponent],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

@@ -8,7 +8,7 @@
 
   @if (loading()) {
     <div class="loading-container">
-      <mat-spinner diameter="40" />
+      <mat-spinner diameter="36" />
     </div>
   } @else {
     <mat-card class="profile-card">
@@ -23,7 +23,6 @@
                 <mat-error>El nombre es requerido</mat-error>
               }
             </mat-form-field>
-
             <mat-form-field appearance="outline">
               <mat-label>Apellido paterno</mat-label>
               <input matInput formControlName="paternalSurname" autocomplete="family-name" />
@@ -39,16 +38,11 @@
               <input matInput formControlName="maternalSurname" />
               <mat-hint>Opcional</mat-hint>
             </mat-form-field>
-
             <mat-form-field appearance="outline">
               <mat-label>RFC</mat-label>
-              <input matInput formControlName="rfc" placeholder="XAXX010101000" maxlength="13" style="text-transform: uppercase" />
-              @if (form.get('rfc')?.hasError('required') && form.get('rfc')?.touched) {
-                <mat-error>El RFC es requerido</mat-error>
-              }
-              @if (form.get('rfc')?.hasError('pattern') && form.get('rfc')?.touched) {
-                <mat-error>RFC inválido (ej. XAXX010101000)</mat-error>
-              }
+              <input matInput formControlName="rfc" placeholder="XAXX010101000" maxlength="13" style="text-transform:uppercase" />
+              @if (form.get('rfc')?.hasError('required') && form.get('rfc')?.touched) { <mat-error>El RFC es requerido</mat-error> }
+              @if (form.get('rfc')?.hasError('pattern') && form.get('rfc')?.touched) { <mat-error>RFC inválido (ej. XAXX010101000)</mat-error> }
             </mat-form-field>
           </div>
 
@@ -56,9 +50,7 @@
             <mat-form-field appearance="outline" class="full-width">
               <mat-label>Razón social</mat-label>
               <input matInput formControlName="razonSocial" />
-              @if (form.get('razonSocial')?.hasError('required') && form.get('razonSocial')?.touched) {
-                <mat-error>La razón social es requerida</mat-error>
-              }
+              @if (form.get('razonSocial')?.hasError('required') && form.get('razonSocial')?.touched) { <mat-error>La razón social es requerida</mat-error> }
             </mat-form-field>
           </div>
 
@@ -66,12 +58,8 @@
             <mat-form-field appearance="outline">
               <mat-label>Código postal</mat-label>
               <input matInput formControlName="postalCode" maxlength="5" placeholder="00000" />
-              @if (form.get('postalCode')?.hasError('required') && form.get('postalCode')?.touched) {
-                <mat-error>El código postal es requerido</mat-error>
-              }
-              @if (form.get('postalCode')?.hasError('pattern') && form.get('postalCode')?.touched) {
-                <mat-error>Debe ser un código de 5 dígitos</mat-error>
-              }
+              @if (form.get('postalCode')?.hasError('required') && form.get('postalCode')?.touched) { <mat-error>El código postal es requerido</mat-error> }
+              @if (form.get('postalCode')?.hasError('pattern') && form.get('postalCode')?.touched) { <mat-error>Debe ser un código de 5 dígitos</mat-error> }
             </mat-form-field>
           </div>
 
@@ -83,9 +71,7 @@
                   <mat-option [value]="option.value">{{ option.label }}</mat-option>
                 }
               </mat-select>
-              @if (form.get('personType')?.hasError('required') && form.get('personType')?.touched) {
-                <mat-error>El tipo de persona es requerido</mat-error>
-              }
+              @if (form.get('personType')?.hasError('required') && form.get('personType')?.touched) { <mat-error>El tipo de persona es requerido</mat-error> }
             </mat-form-field>
 
             <mat-form-field appearance="outline">
@@ -95,25 +81,15 @@
                   <mat-option [value]="regime.value">{{ regime.clave }} – {{ regime.label }}</mat-option>
                 }
               </mat-select>
-              @if (!form.get('personType')?.value) {
-                <mat-hint>Selecciona primero el tipo de persona</mat-hint>
-              }
-              @if (form.get('regimenFiscal')?.hasError('required') && form.get('regimenFiscal')?.touched) {
-                <mat-error>El régimen fiscal es requerido</mat-error>
-              }
+              @if (!form.get('personType')?.value) { <mat-hint>Selecciona primero el tipo de persona</mat-hint> }
+              @if (form.get('regimenFiscal')?.hasError('required') && form.get('regimenFiscal')?.touched) { <mat-error>El régimen fiscal es requerido</mat-error> }
             </mat-form-field>
           </div>
 
           <div class="form-actions">
-            <button
-              mat-flat-button
-              type="submit"
-              [disabled]="saving() || form.invalid"
-              class="save-btn"
-            >
-              @if (saving()) {
-                <mat-spinner diameter="20" />
-              }
+            <button nx-btn variant="solid" size="lg" type="submit"
+                    [disabled]="saving() || form.invalid" class="save-btn">
+              @if (saving()) { <span class="nx-spinner nx-spinner-lg"></span> }
               {{ saving() ? 'Guardando...' : (isNewUser() ? 'Crear perfil' : 'Guardar cambios') }}
             </button>
           </div>

@@ -12,6 +12,7 @@ import mx.synectura.nexo_cfdi.modules.ingestion.application.dto.UpdateIngestedEm
 import mx.synectura.nexo_cfdi.modules.ingestion.domain.JobTrigger;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +41,16 @@ public class IngestionController {
     @GetMapping("/jobs/{jobId}")
     public JobRunResponse getJobStatus(@PathVariable UUID jobId) {
         return ingestionService.getJobStatus(jobId);
+    }
+
+    /** Devuelve el último job exitoso del período, o 204 si nunca se ha procesado. */
+    @GetMapping("/jobs/latest")
+    public ResponseEntity<JobRunResponse> getLatestSuccessfulJob(@AuthenticationPrincipal Jwt jwt,
+                                                                  @RequestParam int year,
+                                                                  @RequestParam int month) {
+        return ingestionService.getLatestSuccessfulJob(jwt.getSubject(), year, month)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
     }
 
     /** findAll de correos ingeridos del usuario para un mes/año. */

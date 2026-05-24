@@ -1,22 +1,22 @@
 <div class="page-container">
+
+  <!-- Header -->
   <div class="page-header">
     <div>
       <h2 class="page-title">Búsqueda de CFDIs</h2>
       <p class="page-subtitle">Busca y revisa los correos con facturas recibidas en un período.</p>
     </div>
     <div class="header-actions">
-      <button mat-stroked-button class="manual-btn" (click)="openManualEntry()">
-        <mat-icon>add</mat-icon>
-        CFDI manual
+      <button nx-btn variant="outline" (click)="openManualEntry()">
+        <app-icon name="plus" [size]="16" /> CFDI manual
       </button>
-      <button mat-stroked-button class="keywords-btn" (click)="openKeywordConfig()">
-        <mat-icon>tune</mat-icon>
-        Palabras clave
+      <button nx-btn variant="outline" (click)="openKeywordConfig()">
+        <app-icon name="sliders" [size]="16" /> Palabras clave
       </button>
     </div>
   </div>
 
-  <!-- Search form -->
+  <!-- Search card -->
   <mat-card class="search-card" appearance="outlined">
     <mat-card-content>
       <div class="search-form">
@@ -38,68 +38,64 @@
           </mat-select>
         </mat-form-field>
 
-        <button
-          mat-flat-button
-          class="search-btn"
-          (click)="search()"
-          [disabled]="triggering() || isRunning()"
-        >
-          @if (triggering()) {
-            <mat-spinner diameter="18" class="btn-spinner" />
-          } @else {
-            <mat-icon>search</mat-icon>
-          }
+        <button nx-btn variant="outline" size="lg" class="search-btn"
+                (click)="viewLatest()" [disabled]="isBusy()">
+          @if (loadingLatest()) { <span class="nx-spinner"></span> }
+          @else { <app-icon name="history" [size]="17" /> }
+          Ver última ingesta
+        </button>
+
+        <button nx-btn variant="solid" size="lg" class="search-btn"
+                (click)="search()" [disabled]="isBusy()">
+          @if (triggering()) { <span class="nx-spinner"></span> }
+          @else { <app-icon name="search" [size]="17" /> }
           Buscar CFDIs
         </button>
       </div>
     </mat-card-content>
   </mat-card>
 
-  <!-- API error banner -->
+  <!-- Error banner -->
   @if (apiError(); as err) {
     <div [class]="'alert-banner alert-' + err.code.toLowerCase()">
-      <mat-icon class="alert-icon">
-        @switch (err.code) {
-          @case ('INVALID_PERIOD') { event_busy }
-          @case ('ALREADY_RUNNING') { hourglass_top }
-          @default { error_outline }
-        }
-      </mat-icon>
+      <app-icon class="alert-icon"
+        [name]="err.code === 'INVALID_PERIOD' ? 'calendar-x' : err.code === 'ALREADY_RUNNING' ? 'hourglass' : 'alert-circle'"
+        [size]="20" />
       <div class="alert-body">
         <span class="alert-title">
           @switch (err.code) {
-            @case ('INVALID_PERIOD') { Período no disponible }
-            @case ('ALREADY_RUNNING') { Proceso en curso }
+            @case ('INVALID_PERIOD')   { Período no disponible }
+            @case ('ALREADY_RUNNING')  { Proceso en curso }
             @default { Error }
           }
         </span>
-        <span class="alert-message">{{ err.message }}</span>
+        <span class="alert-msg">{{ err.message }}</span>
       </div>
-      <button mat-icon-button class="alert-close" (click)="apiError.set(null)" aria-label="Cerrar">
-        <mat-icon>close</mat-icon>
+      <button nx-btn variant="icon" class="alert-close" (click)="apiError.set(null)" aria-label="Cerrar">
+        <app-icon name="x" [size]="15" />
       </button>
     </div>
   }
 
-  <!-- Job status -->
+  <!-- Job status card -->
   @if (jobRun(); as job) {
     <mat-card class="job-card" appearance="outlined">
       <mat-card-content>
         <div class="job-header">
-          <span [class]="'job-status-badge job-status-' + (job.status | lowercase)">
+          <span [class]="'job-badge job-badge-' + job.status.toLowerCase()">
             @switch (job.status) {
               @case ('RUNNING') { En progreso }
-              @case ('SUCCESS') { Completado }
-              @case ('FAILED') { Fallido }
+              @case ('SUCCESS') { Completado  }
+              @case ('FAILED')  { Fallido     }
             }
           </span>
           <span class="job-period">{{ monthLabel(job.targetMonth) }} {{ job.targetYear }}</span>
-          <span class="job-time">Iniciado a las {{ job.startedAt | date: 'HH:mm:ss' }}</span>
+          <span class="job-time">{{ job.startedAt | date: 'HH:mm:ss' }}</span>
         </div>
 
         @if (job.status === 'RUNNING') {
           <mat-progress-bar mode="indeterminate" class="progress-bar" />
-          <p class="running-hint">Analizando buzones de correo, esto puede tardar unos segundos…</p>
+          <p class="running-hint">Analizando buzones de correo…</p>
         } @else {
           <div class="job-stats">
             <div class="stat">
@@ -108,35 +104,35 @@
             </div>
             @if (emails().length > 0) {
               <div class="stat">
-                <span class="stat-value stat-value-stored">{{ storedCount() }}</span>
+                <span class="stat-value text-success">{{ storedCount() }}</span>
                 <span class="stat-label">almacenados</span>
               </div>
               @if (errorCount() > 0) {
                 <div class="stat">
-                  <span class="stat-value stat-value-error">{{ errorCount() }}</span>
+                  <span class="stat-value text-danger">{{ errorCount() }}</span>
                   <span class="stat-label">con error</span>
                 </div>
               }
             }
             <div class="stat">
               <span class="stat-value">{{ job.accountsOk }} / {{ job.accountsTotal }}</span>
-              <span class="stat-label">cuentas procesadas</span>
+              <span class="stat-label">cuentas</span>
             </div>
             @if (job.accountsFailed > 0) {
-              <div class="stat stat-warn">
-                <mat-icon>warning_amber</mat-icon>
+              <div class="stat-alert">
+                <app-icon name="alert-triangle" [size]="15" />
                 <span>{{ job.accountsFailed }} cuenta(s) con error</span>
               </div>
             }
             @if (job.finishedAt) {
               <div class="stat">
                 <span class="stat-value">{{ job.finishedAt | date: 'HH:mm:ss' }}</span>
-                <span class="stat-label">hora de finalización</span>
+                <span class="stat-label">finalizado</span>
               </div>
             }
             @if (job.errorMessage) {
-              <div class="stat stat-error">
-                <mat-icon>error_outline</mat-icon>
+              <div class="stat-alert stat-alert-danger">
+                <app-icon name="alert-circle" [size]="15" />
                 <span>{{ job.errorMessage }}</span>
               </div>
             }
@@ -150,9 +146,12 @@
   @if (emails().length > 0) {
     <div class="results-header">
       <h3 class="results-title">
-        <mat-icon>inbox</mat-icon>
+        <app-icon name="inbox" [size]="17" />
         {{ emails().length }} correo(s) con CFDI
       </h3>
+      <button nx-btn variant="solid" (click)="openMonthlyReport()">
+        <app-icon name="send" [size]="16" /> Enviar Reporte
+      </button>
     </div>
 
     <div class="table-scroll-wrapper">
@@ -163,10 +162,10 @@
           <th mat-header-cell *matHeaderCellDef class="col-expand"></th>
           <td mat-cell *matCellDef="let row" class="col-expand">
             @if (row.processingStatus === 'STORED') {
-              <button mat-icon-button class="expand-btn"
+              <button nx-btn variant="icon" class="expand-btn"
                       (click)="toggleExpand(row); $event.stopPropagation()"
                       [matTooltip]="expandedRow() === row ? 'Ocultar detalle' : 'Ver detalle CFDI'">
-                <mat-icon>{{ expandedRow() === row ? 'expand_less' : 'expand_more' }}</mat-icon>
+                <app-icon [name]="expandedRow() === row ? 'chevron-up' : 'chevron-down'" [size]="16" />
               </button>
             }
           </td>
@@ -177,16 +176,18 @@
           <th mat-header-cell *matHeaderCellDef class="col-status">Estado</th>
           <td mat-cell *matCellDef="let row" class="col-status">
             <div class="status-cell">
-              <span [class]="'proc-badge proc-' + row.processingStatus.toLowerCase()"
-                    [matTooltip]="row.processingStatus === 'ERROR' ? (row.errorCause ?? '') : ''">
+              <span
+                [class]="'proc-badge proc-' + row.processingStatus.toLowerCase()"
+                [matTooltip]="row.processingStatus === 'ERROR' ? (row.errorCause ?? '') : ''"
+              >
                 @switch (row.processingStatus) {
-                  @case ('STORED')  { <mat-icon class="badge-icon">check_circle</mat-icon> Almacenado }
-                  @case ('ERROR')   { <mat-icon class="badge-icon">error</mat-icon> Error }
-                  @case ('PENDING') { <mat-icon class="badge-icon">schedule</mat-icon> Pendiente }
+                  @case ('STORED')  { <app-icon name="check-circle" [size]="13" /> Almacenado }
+                  @case ('ERROR')   { <app-icon name="x-circle" [size]="13" /> Error }
+                  @case ('PENDING') { <app-icon name="clock" [size]="13" /> Pendiente }
                 }
               </span>
               @if (row.source === 'MANUAL') {
-                <span class="source-manual-badge" matTooltip="Ingresado manualmente">Manual</span>
+                <span class="source-badge" matTooltip="Ingresado manualmente">Manual</span>
               }
             </div>
           </td>
@@ -196,9 +197,7 @@
         <ng-container matColumnDef="subject">
           <th mat-header-cell *matHeaderCellDef class="col-subject">Asunto</th>
           <td mat-cell *matCellDef="let row" class="col-subject">
-            <span class="truncate-cell" [matTooltip]="row.subject ?? ''">
-              {{ row.subject ?? '(sin asunto)' }}
-            </span>
+            <span class="truncate" [matTooltip]="row.subject ?? ''">{{ row.subject ?? '(sin asunto)' }}</span>
           </td>
         </ng-container>
 
@@ -206,30 +205,24 @@
         <ng-container matColumnDef="fromAddress">
           <th mat-header-cell *matHeaderCellDef class="col-from">Remitente</th>
           <td mat-cell *matCellDef="let row" class="col-from">
-            <span class="truncate-cell muted" [matTooltip]="row.fromAddress ?? ''">
-              {{ row.fromAddress ?? '—' }}
-            </span>
+            <span class="truncate text-muted" [matTooltip]="row.fromAddress ?? ''">{{ row.fromAddress ?? '—' }}</span>
           </td>
         </ng-container>
 
         <!-- Recibido -->
         <ng-container matColumnDef="receivedAt">
           <th mat-header-cell *matHeaderCellDef class="col-date">Recibido</th>
-          <td mat-cell *matCellDef="let row" class="col-date">
-            {{ row.receivedAt | date: 'dd/MM/yy HH:mm' }}
-          </td>
+          <td mat-cell *matCellDef="let row" class="col-date">{{ row.receivedAt | date: 'dd/MM/yy HH:mm' }}</td>
         </ng-container>
 
-        <!-- UUID CFDI -->
+        <!-- UUID -->
         <ng-container matColumnDef="cfdiUuid">
-          <th mat-header-cell *matHeaderCellDef class="col-uuid">UUID CFDI</th>
+          <th mat-header-cell *matHeaderCellDef class="col-uuid">UUID</th>
           <td mat-cell *matCellDef="let row" class="col-uuid">
             @if (row.cfdiUuid) {
-              <span class="uuid-cell" [matTooltip]="row.cfdiUuid">
-                {{ row.cfdiUuid | slice: 0 : 8 }}…
-              </span>
+              <span class="mono text-secondary" [matTooltip]="row.cfdiUuid">{{ row.cfdiUuid | slice:0:8 }}…</span>
             } @else {
-              <span class="muted">—</span>
+              <span class="text-muted">—</span>
             }
           </td>
         </ng-container>
@@ -240,17 +233,19 @@
           <td mat-cell *matCellDef="let row" class="col-types">
             <div class="type-icons">
               @if (row.hasXml) {
-                <span class="type-badge xml" matTooltip="Contiene XML"
-                      [class.clickable]="hasStoredAttachment(row, 'xml')"
-                      (click)="hasStoredAttachment(row, 'xml') ? previewFile(row, 'xml') : null; $event.stopPropagation()">XML</span>
+                <span class="nx-chip nx-chip-success nx-chip-clickable"
+                      [class.nx-chip-clickable]="hasStoredAttachment(row, 'xml')"
+                      matTooltip="Contiene XML"
+                      (click)="hasStoredAttachment(row,'xml') ? previewFile(row,'xml') : null; $event.stopPropagation()">XML</span>
               }
               @if (row.hasZip) {
-                <span class="type-badge zip" matTooltip="Contiene ZIP">ZIP</span>
+                <span class="nx-chip nx-chip-warning" matTooltip="Contiene ZIP">ZIP</span>
               }
               @if (row.hasPdf) {
-                <span class="type-badge pdf" matTooltip="Contiene PDF"
-                      [class.clickable]="hasStoredAttachment(row, 'pdf')"
-                      (click)="hasStoredAttachment(row, 'pdf') ? previewFile(row, 'pdf') : null; $event.stopPropagation()">PDF</span>
+                <span class="nx-chip nx-chip-danger"
+                      [class.nx-chip-clickable]="hasStoredAttachment(row, 'pdf')"
+                      matTooltip="Contiene PDF"
+                      (click)="hasStoredAttachment(row,'pdf') ? previewFile(row,'pdf') : null; $event.stopPropagation()">PDF</span>
               }
             </div>
           </td>
@@ -260,11 +255,11 @@
         <ng-container matColumnDef="matchReasons">
           <th mat-header-cell *matHeaderCellDef class="col-reasons">Detección</th>
           <td mat-cell *matCellDef="let row" class="col-reasons">
-            <mat-chip-set>
+            <div class="nx-chip-list">
               @for (reason of row.matchReasons; track reason) {
-                <mat-chip class="reason-chip">{{ matchReasonLabel(reason) }}</mat-chip>
+                <span class="nx-chip">{{ matchReasonLabel(reason) }}</span>
               }
-            </mat-chip-set>
+            </div>
           </td>
         </ng-container>
 
@@ -273,11 +268,9 @@
           <th mat-header-cell *matHeaderCellDef class="col-error">Causa de error</th>
           <td mat-cell *matCellDef="let row" class="col-error">
             @if (row.errorCause) {
-              <span class="error-cause-cell" [matTooltip]="row.errorCause">
-                {{ row.errorCause }}
-              </span>
+              <span class="error-cause mono truncate" [matTooltip]="row.errorCause">{{ row.errorCause }}</span>
             } @else {
-              <span class="muted">—</span>
+              <span class="text-muted">—</span>
             }
           </td>
         </ng-container>
@@ -286,13 +279,12 @@
         <ng-container matColumnDef="attachments">
           <th mat-header-cell *matHeaderCellDef class="col-attach">Adjuntos</th>
           <td mat-cell *matCellDef="let row" class="col-attach">
-            <div class="attachments-cell">
-              <mat-icon class="attach-icon">attach_file</mat-icon>
+            <div class="attach-cell">
+              <app-icon name="paperclip" [size]="15" class="text-muted" />
               <span>{{ row.attachments.length }}</span>
               @if (storedAttachments(row) > 0) {
-                <span class="stored-count"
-                      [matTooltip]="storedAttachments(row) + ' almacenado(s) en blob'">
-                  <mat-icon class="cloud-icon">cloud_done</mat-icon>{{ storedAttachments(row) }}
+                <span class="stored-count" [matTooltip]="storedAttachments(row) + ' en blob'">
+                  <app-icon name="cloud-check" [size]="14" />{{ storedAttachments(row) }}
                 </span>
               }
             </div>
@@ -303,15 +295,15 @@
         <ng-container matColumnDef="actions">
           <th mat-header-cell *matHeaderCellDef class="col-actions"></th>
           <td mat-cell *matCellDef="let row" class="col-actions">
-            <button mat-icon-button class="row-edit-btn"
+            <button nx-btn variant="icon" class="row-edit-btn"
                     (click)="openEditEntry(row); $event.stopPropagation()"
                     matTooltip="Editar datos de facturación">
-              <mat-icon>edit</mat-icon>
+              <app-icon name="edit" [size]="15" />
             </button>
           </td>
         </ng-container>
 
-        <!-- Detalle CFDI (fila expandible) -->
+        <!-- Detalle expandible -->
         <ng-container matColumnDef="expandedDetail">
           <td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length" class="detail-cell">
             @if (expandedRow() === row) {
@@ -363,9 +355,10 @@
 
   } @else if (jobRun()?.status === 'SUCCESS') {
     <div class="empty-state">
-      <mat-icon class="empty-icon">inbox</mat-icon>
+      <app-icon name="inbox" [size]="48" class="empty-icon" />
       <h3>Sin correos encontrados</h3>
-      <p>No se detectaron correos con CFDIs para {{ monthLabel(jobRun()!.targetMonth) }} {{ jobRun()!.targetYear }}.</p>
+      <p>No se detectaron CFDIs para {{ monthLabel(jobRun()!.targetMonth) }} {{ jobRun()!.targetYear }}.</p>
     </div>
   }
+
 </div>

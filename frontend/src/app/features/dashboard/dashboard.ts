@@ -1,12 +1,9 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatListModule } from '@angular/material/list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDividerModule } from '@angular/material/divider';
 import { MsalService } from '@azure/msal-angular';
+import { AppIconComponent } from '../../core/ui/icon/icon.component';
+import { AppBtnDirective } from '../../core/ui/button/button.directive';
 
 @Component({
   selector: 'app-dashboard',
@@ -15,11 +12,8 @@ import { MsalService } from '@azure/msal-angular';
     RouterLink,
     RouterLinkActive,
     MatSidenavModule,
-    MatListModule,
-    MatIconModule,
-    MatButtonModule,
-    MatTooltipModule,
-    MatDividerModule,
+    AppIconComponent,
+    AppBtnDirective,
   ],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
@@ -35,7 +29,7 @@ export class DashboardComponent implements OnInit {
       this.msalService.instance.getActiveAccount() ??
       this.msalService.instance.getAllAccounts()[0];
     if (account) {
-      this.userName = account.name ?? '';
+      this.userName  = account.name ?? '';
       this.userEmail = account.username ?? '';
     }
   }

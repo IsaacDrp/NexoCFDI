@@ -80,4 +80,22 @@ public class MinioStorageAdapter implements DocumentStoragePort {
             throw new RuntimeException("Error al generar URL prefirmada para: " + objectKey, e);
         }
     }
+
+    @Override
+    public byte[] fetch(String objectKey) {
+        log.debug("MINIO_FETCH_INICIO bucket={} key={}", bucket, objectKey);
+        long t0 = System.currentTimeMillis();
+        try (var stream = minioClient.getObject(
+                io.minio.GetObjectArgs.builder()
+                        .bucket(bucket)
+                        .object(objectKey)
+                        .build())) {
+            byte[] data = stream.readAllBytes();
+            log.info("MINIO_FETCH_OK bucket={} key={} bytes={} ms={}", bucket, objectKey, data.length, System.currentTimeMillis() - t0);
+            return data;
+        } catch (Exception e) {
+            log.error("MINIO_FETCH_FAIL bucket={} key={} ms={} causa={}", bucket, objectKey, System.currentTimeMillis() - t0, e.getMessage(), e);
+            throw new RuntimeException("Error al descargar objeto de MinIO: " + objectKey, e);
+        }
+    }
 }

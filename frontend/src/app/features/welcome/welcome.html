@@ -1,7 +1,9 @@
 <div class="welcome-page">
   <div class="welcome-card">
+
     <div class="brand">
-      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#1976d2" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none"
+           stroke="var(--nx-primary)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
         <polyline points="14 2 14 8 20 8"/>
         <line x1="16" y1="13" x2="8" y2="13"/>
@@ -18,8 +20,8 @@
       tus CFDIs y mantén tu contabilidad organizada.
     </p>
 
-    <button mat-flat-button class="login-btn" (click)="login()">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" width="20" height="20">
+    <button nx-btn variant="solid" size="lg" class="login-btn" (click)="login()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" width="20" height="20" style="flex-shrink:0">
         <path fill="#f3f3f3" d="M0 0h23v23H0z"/>
         <path fill="#f35325" d="M1 1h10v10H1z"/>
         <path fill="#81bc06" d="M12 1h10v10H12z"/>
@@ -32,5 +34,6 @@
     <p class="footer-note">
       Al iniciar sesión aceptas el uso de tu cuenta de Microsoft para acceder a NexoCFDI.
     </p>
+
   </div>
 </div>

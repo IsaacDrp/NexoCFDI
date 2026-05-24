@@ -16,6 +16,13 @@ public interface IngestedEmailJpaRepository extends JpaRepository<IngestedEmailE
                                                            @Param("from") OffsetDateTime from,
                                                            @Param("to") OffsetDateTime to);
 
+    @Query("SELECT e FROM IngestedEmailEntity e WHERE e.user.id = :userId " +
+            "AND e.cfdiFecha >= :from AND e.cfdiFecha < :to " +
+            "AND e.processingStatus = 'STORED' ORDER BY e.cfdiFecha DESC")
+    List<IngestedEmailEntity> findParsedCfdisByUserAndMonth(@Param("userId") UUID userId,
+                                                            @Param("from") java.time.LocalDateTime from,
+                                                            @Param("to") java.time.LocalDateTime to);
+
     @Query("SELECT a.storageKey FROM IngestedAttachmentEntity a " +
             "WHERE a.ingestedEmail.user.id = :userId " +
             "AND a.ingestedEmail.receivedAt >= :from AND a.ingestedEmail.receivedAt < :to " +

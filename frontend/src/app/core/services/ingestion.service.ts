@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   IngestedEmailResponse,
@@ -37,5 +38,13 @@ export class IngestionService {
 
   getAttachmentPreviewUrl(emailId: string, attachmentId: string): Observable<PresignedUrlResponse> {
     return this.http.get<PresignedUrlResponse>(`${this.base}/emails/${emailId}/attachments/${attachmentId}/preview`);
+  }
+
+  getLatestSuccessfulJob(year: number, month: number): Observable<JobRunResponse | null> {
+    const params = new HttpParams().set('year', year).set('month', month);
+    return this.http.get<JobRunResponse>(`${this.base}/jobs/latest`, { params, observe: 'response' }).pipe(
+      map((res) => (res.status === 204 ? null : res.body)),
+      catchError(() => of(null)),
+    );
   }
 }

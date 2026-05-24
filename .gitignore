@@ -27,6 +27,10 @@ CLAUDE.md
 .cursorignore
 .windsurfrules
 .gemini/
+.antigravitycli/
 cline_docs/
 .cline/
 *.ai.md
+
+# Ingestion output — real CFDI documents, never commit
+relacion_*/

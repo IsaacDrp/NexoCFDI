@@ -1,5 +1,5 @@
 <h2 mat-dialog-title class="dialog-title">
-  <mat-icon class="title-icon">tune</mat-icon>
+  <app-icon name="sliders" [size]="20" class="title-icon" />
   Filtros de detección
 </h2>
 
@@ -13,288 +13,201 @@
       <mat-spinner diameter="36" />
     </div>
   } @else {
-    <mat-tab-group animationDuration="200ms">
+    <nav class="nx-tabs__nav" role="tablist">
+      <button class="nx-tabs__tab" [class.active]="activeTab() === 0" (click)="activeTab.set(0)" role="tab">
+        <app-icon name="plus-circle" [size]="15" class="tab-icon tab-icon-include" />
+        Inclusión
+        @if (includeKeywords().length > 0) {
+          <span class="tab-badge tab-badge-include">{{ includeKeywords().length }}</span>
+        }
+      </button>
+      <button class="nx-tabs__tab" [class.active]="activeTab() === 1" (click)="activeTab.set(1)" role="tab">
+        <app-icon name="minus-circle" [size]="15" class="tab-icon tab-icon-exclude" />
+        Excluir texto
+        @if (excludeKeywords().length > 0) {
+          <span class="tab-badge tab-badge-exclude">{{ excludeKeywords().length }}</span>
+        }
+      </button>
+      <button class="nx-tabs__tab" [class.active]="activeTab() === 2" (click)="activeTab.set(2)" role="tab">
+        <app-icon name="mail-check" [size]="15" class="tab-icon tab-icon-sender-include" />
+        Remitente incluir
+        @if (senderIncludeKeywords().length > 0) {
+          <span class="tab-badge tab-badge-sender-include">{{ senderIncludeKeywords().length }}</span>
+        }
+      </button>
+      <button class="nx-tabs__tab" [class.active]="activeTab() === 3" (click)="activeTab.set(3)" role="tab">
+        <app-icon name="mail-x" [size]="15" class="tab-icon tab-icon-sender-exclude" />
+        Remitente excluir
+        @if (senderExcludeKeywords().length > 0) {
+          <span class="tab-badge tab-badge-sender-exclude">{{ senderExcludeKeywords().length }}</span>
+        }
+      </button>
+    </nav>
 
-      <!-- INCLUDE tab -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon include-icon">add_circle_outline</mat-icon>
-          Inclusión
-          @if (includeKeywords().length > 0) {
-            <span class="tab-badge include-badge">{{ includeKeywords().length }}</span>
-          }
-        </ng-template>
-
-        <div class="tab-content">
-          <p class="tab-hint include-hint">
-            Si el correo contiene cualquiera de estas frases, se identifica como factura.
-          </p>
-
-          <form [formGroup]="includeForm" (ngSubmit)="addKeyword('INCLUDE')" class="add-form">
-            <mat-form-field appearance="outline" class="phrase-field">
-              <mat-label>Nueva frase</mat-label>
-              <input matInput formControlName="phrase" placeholder="ej. recibo de honorarios" />
-              @if (includeForm.get('phrase')?.hasError('required') && includeForm.get('phrase')?.touched) {
-                <mat-error>Campo requerido</mat-error>
-              }
-              @if (includeForm.get('phrase')?.hasError('maxlength')) {
-                <mat-error>Máximo 255 caracteres</mat-error>
-              }
-            </mat-form-field>
-            <button
-              mat-flat-button
-              type="submit"
-              class="add-btn include-btn"
-              [disabled]="savingInclude()"
-            >
-              @if (savingInclude()) {
-                <mat-spinner diameter="16" />
-              } @else {
-                <mat-icon>add</mat-icon>
-              }
-              Agregar
-            </button>
-          </form>
-
-          <div class="keyword-list">
-            @for (kw of includeKeywords(); track kw.id) {
-              <div class="keyword-chip include-chip">
-                <mat-icon class="chip-icon">label</mat-icon>
-                <span class="chip-phrase">{{ kw.phrase }}</span>
-                <button
-                  mat-icon-button
-                  class="chip-delete"
-                  [disabled]="deletingId() === kw.id"
-                  (click)="deleteKeyword(kw)"
-                  matTooltip="Eliminar"
-                >
-                  @if (deletingId() === kw.id) {
-                    <mat-spinner diameter="14" />
-                  } @else {
-                    <mat-icon>close</mat-icon>
-                  }
-                </button>
-              </div>
-            } @empty {
-              <div class="empty-list">
-                <span>Sin palabras de inclusión. Se usan solo las predeterminadas del sistema.</span>
-              </div>
+    <!-- INCLUDE panel -->
+    @if (activeTab() === 0) {
+      <div class="tab-panel" role="tabpanel">
+        <p class="tab-hint tab-hint-include">
+          Si el correo contiene cualquiera de estas frases, se identifica como factura.
+        </p>
+        <form [formGroup]="includeForm" (ngSubmit)="addKeyword('INCLUDE')" class="add-form">
+          <mat-form-field appearance="outline" class="phrase-field">
+            <mat-label>Nueva frase</mat-label>
+            <input matInput formControlName="phrase" placeholder="ej. recibo de honorarios" />
+            @if (includeForm.get('phrase')?.hasError('required') && includeForm.get('phrase')?.touched) {
+              <mat-error>Campo requerido</mat-error>
             }
-          </div>
-        </div>
-      </mat-tab>
-
-      <!-- EXCLUDE tab -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon exclude-icon">remove_circle_outline</mat-icon>
-          Excluir texto
-          @if (excludeKeywords().length > 0) {
-            <span class="tab-badge exclude-badge">{{ excludeKeywords().length }}</span>
-          }
-        </ng-template>
-
-        <div class="tab-content">
-          <p class="tab-hint exclude-hint">
-            Si el correo contiene cualquiera de estas frases, <strong>se ignora</strong> aunque cumpla otras reglas.
-          </p>
-
-          <form [formGroup]="excludeForm" (ngSubmit)="addKeyword('EXCLUDE')" class="add-form">
-            <mat-form-field appearance="outline" class="phrase-field">
-              <mat-label>Nueva frase</mat-label>
-              <input matInput formControlName="phrase" placeholder="ej. newsletter" />
-              @if (excludeForm.get('phrase')?.hasError('required') && excludeForm.get('phrase')?.touched) {
-                <mat-error>Campo requerido</mat-error>
-              }
-              @if (excludeForm.get('phrase')?.hasError('maxlength')) {
-                <mat-error>Máximo 255 caracteres</mat-error>
-              }
-            </mat-form-field>
-            <button
-              mat-flat-button
-              type="submit"
-              class="add-btn exclude-btn"
-              [disabled]="savingExclude()"
-            >
-              @if (savingExclude()) {
-                <mat-spinner diameter="16" />
-              } @else {
-                <mat-icon>block</mat-icon>
-              }
-              Agregar
-            </button>
-          </form>
-
-          <div class="keyword-list">
-            @for (kw of excludeKeywords(); track kw.id) {
-              <div class="keyword-chip exclude-chip">
-                <mat-icon class="chip-icon">label_off</mat-icon>
-                <span class="chip-phrase">{{ kw.phrase }}</span>
-                <button
-                  mat-icon-button
-                  class="chip-delete"
-                  [disabled]="deletingId() === kw.id"
-                  (click)="deleteKeyword(kw)"
-                  matTooltip="Eliminar"
-                >
-                  @if (deletingId() === kw.id) {
-                    <mat-spinner diameter="14" />
-                  } @else {
-                    <mat-icon>close</mat-icon>
-                  }
-                </button>
-              </div>
-            } @empty {
-              <div class="empty-list">
-                <span>Sin palabras de exclusión configuradas.</span>
-              </div>
+            @if (includeForm.get('phrase')?.hasError('maxlength')) {
+              <mat-error>Máximo 255 caracteres</mat-error>
             }
-          </div>
-        </div>
-      </mat-tab>
-
-      <!-- SENDER_INCLUDE tab -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon sender-include-icon">mark_email_read</mat-icon>
-          Remitente incluir
-          @if (senderIncludeKeywords().length > 0) {
-            <span class="tab-badge sender-include-badge">{{ senderIncludeKeywords().length }}</span>
+          </mat-form-field>
+          <button nx-btn variant="solid" color="success" type="submit" class="add-btn" [disabled]="savingInclude()">
+            @if (savingInclude()) { <span class="nx-spinner"></span> } @else { <app-icon name="plus" [size]="16" /> }
+            Agregar
+          </button>
+        </form>
+        <div class="keyword-list">
+          @for (kw of includeKeywords(); track kw.id) {
+            <div class="keyword-chip keyword-chip-include">
+              <app-icon name="tag" [size]="14" class="chip-icon" />
+              <span class="chip-phrase">{{ kw.phrase }}</span>
+              <button nx-btn variant="icon" color="danger" class="chip-delete-btn"
+                      [disabled]="deletingId() === kw.id" (click)="deleteKeyword(kw)" matTooltip="Eliminar">
+                @if (deletingId() === kw.id) { <span class="nx-spinner nx-spinner-sm"></span> }
+                @else { <app-icon name="x" [size]="14" /> }
+              </button>
+            </div>
+          } @empty {
+            <div class="empty-list">Sin palabras de inclusión. Se usan solo las predeterminadas del sistema.</div>
           }
-        </ng-template>
-
-        <div class="tab-content">
-          <p class="tab-hint sender-include-hint">
-            Correos de estas direcciones o dominios se identifican siempre como facturas. Acepta dirección exacta (ej. <code>facturacion@empresa.com</code>) o dominio (ej. <code>empresa.com</code>).
-          </p>
-
-          <form [formGroup]="senderIncludeForm" (ngSubmit)="addKeyword('SENDER_INCLUDE')" class="add-form">
-            <mat-form-field appearance="outline" class="phrase-field">
-              <mat-label>Dirección o dominio</mat-label>
-              <input matInput formControlName="phrase" placeholder="ej. facturacion@proveedor.com" />
-              @if (senderIncludeForm.get('phrase')?.hasError('required') && senderIncludeForm.get('phrase')?.touched) {
-                <mat-error>Campo requerido</mat-error>
-              }
-              @if (senderIncludeForm.get('phrase')?.hasError('maxlength')) {
-                <mat-error>Máximo 255 caracteres</mat-error>
-              }
-            </mat-form-field>
-            <button
-              mat-flat-button
-              type="submit"
-              class="add-btn sender-include-btn"
-              [disabled]="savingSenderInclude()"
-            >
-              @if (savingSenderInclude()) {
-                <mat-spinner diameter="16" />
-              } @else {
-                <mat-icon>add</mat-icon>
-              }
-              Agregar
-            </button>
-          </form>
-
-          <div class="keyword-list">
-            @for (kw of senderIncludeKeywords(); track kw.id) {
-              <div class="keyword-chip sender-include-chip">
-                <mat-icon class="chip-icon">alternate_email</mat-icon>
-                <span class="chip-phrase">{{ kw.phrase }}</span>
-                <button
-                  mat-icon-button
-                  class="chip-delete"
-                  [disabled]="deletingId() === kw.id"
-                  (click)="deleteKeyword(kw)"
-                  matTooltip="Eliminar"
-                >
-                  @if (deletingId() === kw.id) {
-                    <mat-spinner diameter="14" />
-                  } @else {
-                    <mat-icon>close</mat-icon>
-                  }
-                </button>
-              </div>
-            } @empty {
-              <div class="empty-list">
-                <span>Sin remitentes de inclusión configurados.</span>
-              </div>
-            }
-          </div>
         </div>
-      </mat-tab>
+      </div>
+    }
 
-      <!-- SENDER_EXCLUDE tab -->
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon sender-exclude-icon">mail_lock</mat-icon>
-          Remitente excluir
-          @if (senderExcludeKeywords().length > 0) {
-            <span class="tab-badge sender-exclude-badge">{{ senderExcludeKeywords().length }}</span>
+    <!-- EXCLUDE panel -->
+    @if (activeTab() === 1) {
+      <div class="tab-panel" role="tabpanel">
+        <p class="tab-hint tab-hint-exclude">
+          Si el correo contiene cualquiera de estas frases, <strong>se ignora</strong> aunque cumpla otras reglas.
+        </p>
+        <form [formGroup]="excludeForm" (ngSubmit)="addKeyword('EXCLUDE')" class="add-form">
+          <mat-form-field appearance="outline" class="phrase-field">
+            <mat-label>Nueva frase</mat-label>
+            <input matInput formControlName="phrase" placeholder="ej. newsletter" />
+            @if (excludeForm.get('phrase')?.hasError('required') && excludeForm.get('phrase')?.touched) {
+              <mat-error>Campo requerido</mat-error>
+            }
+            @if (excludeForm.get('phrase')?.hasError('maxlength')) {
+              <mat-error>Máximo 255 caracteres</mat-error>
+            }
+          </mat-form-field>
+          <button nx-btn variant="solid" color="danger" type="submit" class="add-btn" [disabled]="savingExclude()">
+            @if (savingExclude()) { <span class="nx-spinner"></span> } @else { <app-icon name="ban" [size]="16" /> }
+            Agregar
+          </button>
+        </form>
+        <div class="keyword-list">
+          @for (kw of excludeKeywords(); track kw.id) {
+            <div class="keyword-chip keyword-chip-exclude">
+              <app-icon name="tag-off" [size]="14" class="chip-icon" />
+              <span class="chip-phrase">{{ kw.phrase }}</span>
+              <button nx-btn variant="icon" color="danger" class="chip-delete-btn"
+                      [disabled]="deletingId() === kw.id" (click)="deleteKeyword(kw)" matTooltip="Eliminar">
+                @if (deletingId() === kw.id) { <span class="nx-spinner nx-spinner-sm"></span> }
+                @else { <app-icon name="x" [size]="14" /> }
+              </button>
+            </div>
+          } @empty {
+            <div class="empty-list">Sin palabras de exclusión configuradas.</div>
           }
-        </ng-template>
-
-        <div class="tab-content">
-          <p class="tab-hint sender-exclude-hint">
-            Correos de estas direcciones o dominios se <strong>ignoran siempre</strong>, aunque cumplan otras reglas. Acepta dirección exacta o dominio.
-          </p>
-
-          <form [formGroup]="senderExcludeForm" (ngSubmit)="addKeyword('SENDER_EXCLUDE')" class="add-form">
-            <mat-form-field appearance="outline" class="phrase-field">
-              <mat-label>Dirección o dominio</mat-label>
-              <input matInput formControlName="phrase" placeholder="ej. noreply@spam.com" />
-              @if (senderExcludeForm.get('phrase')?.hasError('required') && senderExcludeForm.get('phrase')?.touched) {
-                <mat-error>Campo requerido</mat-error>
-              }
-              @if (senderExcludeForm.get('phrase')?.hasError('maxlength')) {
-                <mat-error>Máximo 255 caracteres</mat-error>
-              }
-            </mat-form-field>
-            <button
-              mat-flat-button
-              type="submit"
-              class="add-btn sender-exclude-btn"
-              [disabled]="savingSenderExclude()"
-            >
-              @if (savingSenderExclude()) {
-                <mat-spinner diameter="16" />
-              } @else {
-                <mat-icon>block</mat-icon>
-              }
-              Agregar
-            </button>
-          </form>
-
-          <div class="keyword-list">
-            @for (kw of senderExcludeKeywords(); track kw.id) {
-              <div class="keyword-chip sender-exclude-chip">
-                <mat-icon class="chip-icon">alternate_email</mat-icon>
-                <span class="chip-phrase">{{ kw.phrase }}</span>
-                <button
-                  mat-icon-button
-                  class="chip-delete"
-                  [disabled]="deletingId() === kw.id"
-                  (click)="deleteKeyword(kw)"
-                  matTooltip="Eliminar"
-                >
-                  @if (deletingId() === kw.id) {
-                    <mat-spinner diameter="14" />
-                  } @else {
-                    <mat-icon>close</mat-icon>
-                  }
-                </button>
-              </div>
-            } @empty {
-              <div class="empty-list">
-                <span>Sin remitentes de exclusión configurados.</span>
-              </div>
-            }
-          </div>
         </div>
-      </mat-tab>
+      </div>
+    }
 
-    </mat-tab-group>
+    <!-- SENDER_INCLUDE panel -->
+    @if (activeTab() === 2) {
+      <div class="tab-panel" role="tabpanel">
+        <p class="tab-hint tab-hint-sender-include">
+          Correos de estas direcciones o dominios se identifican siempre como facturas.
+          Acepta dirección exacta (ej. <code>facturacion@empresa.com</code>) o dominio (ej. <code>empresa.com</code>).
+        </p>
+        <form [formGroup]="senderIncludeForm" (ngSubmit)="addKeyword('SENDER_INCLUDE')" class="add-form">
+          <mat-form-field appearance="outline" class="phrase-field">
+            <mat-label>Dirección o dominio</mat-label>
+            <input matInput formControlName="phrase" placeholder="ej. facturacion@proveedor.com" />
+            @if (senderIncludeForm.get('phrase')?.hasError('required') && senderIncludeForm.get('phrase')?.touched) {
+              <mat-error>Campo requerido</mat-error>
+            }
+            @if (senderIncludeForm.get('phrase')?.hasError('maxlength')) {
+              <mat-error>Máximo 255 caracteres</mat-error>
+            }
+          </mat-form-field>
+          <button nx-btn variant="solid" color="primary" type="submit" class="add-btn" [disabled]="savingSenderInclude()">
+            @if (savingSenderInclude()) { <span class="nx-spinner"></span> } @else { <app-icon name="plus" [size]="16" /> }
+            Agregar
+          </button>
+        </form>
+        <div class="keyword-list">
+          @for (kw of senderIncludeKeywords(); track kw.id) {
+            <div class="keyword-chip keyword-chip-sender-include">
+              <app-icon name="at-sign" [size]="14" class="chip-icon" />
+              <span class="chip-phrase">{{ kw.phrase }}</span>
+              <button nx-btn variant="icon" color="danger" class="chip-delete-btn"
+                      [disabled]="deletingId() === kw.id" (click)="deleteKeyword(kw)" matTooltip="Eliminar">
+                @if (deletingId() === kw.id) { <span class="nx-spinner nx-spinner-sm"></span> }
+                @else { <app-icon name="x" [size]="14" /> }
+              </button>
+            </div>
+          } @empty {
+            <div class="empty-list">Sin remitentes de inclusión configurados.</div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- SENDER_EXCLUDE panel -->
+    @if (activeTab() === 3) {
+      <div class="tab-panel" role="tabpanel">
+        <p class="tab-hint tab-hint-sender-exclude">
+          Correos de estas direcciones o dominios se <strong>ignoran siempre</strong>, aunque cumplan otras reglas.
+          Acepta dirección exacta o dominio.
+        </p>
+        <form [formGroup]="senderExcludeForm" (ngSubmit)="addKeyword('SENDER_EXCLUDE')" class="add-form">
+          <mat-form-field appearance="outline" class="phrase-field">
+            <mat-label>Dirección o dominio</mat-label>
+            <input matInput formControlName="phrase" placeholder="ej. noreply@spam.com" />
+            @if (senderExcludeForm.get('phrase')?.hasError('required') && senderExcludeForm.get('phrase')?.touched) {
+              <mat-error>Campo requerido</mat-error>
+            }
+            @if (senderExcludeForm.get('phrase')?.hasError('maxlength')) {
+              <mat-error>Máximo 255 caracteres</mat-error>
+            }
+          </mat-form-field>
+          <button nx-btn variant="solid" color="warning" type="submit" class="add-btn" [disabled]="savingSenderExclude()">
+            @if (savingSenderExclude()) { <span class="nx-spinner"></span> } @else { <app-icon name="ban" [size]="16" /> }
+            Agregar
+          </button>
+        </form>
+        <div class="keyword-list">
+          @for (kw of senderExcludeKeywords(); track kw.id) {
+            <div class="keyword-chip keyword-chip-sender-exclude">
+              <app-icon name="at-sign" [size]="14" class="chip-icon" />
+              <span class="chip-phrase">{{ kw.phrase }}</span>
+              <button nx-btn variant="icon" color="danger" class="chip-delete-btn"
+                      [disabled]="deletingId() === kw.id" (click)="deleteKeyword(kw)" matTooltip="Eliminar">
+                @if (deletingId() === kw.id) { <span class="nx-spinner nx-spinner-sm"></span> }
+                @else { <app-icon name="x" [size]="14" /> }
+              </button>
+            </div>
+          } @empty {
+            <div class="empty-list">Sin remitentes de exclusión configurados.</div>
+          }
+        </div>
+      </div>
+    }
   }
 </mat-dialog-content>
 
 <mat-dialog-actions align="end">
-  <button mat-button mat-dialog-close>Cerrar</button>
+  <button nx-btn variant="ghost" mat-dialog-close>Cerrar</button>
 </mat-dialog-actions>
