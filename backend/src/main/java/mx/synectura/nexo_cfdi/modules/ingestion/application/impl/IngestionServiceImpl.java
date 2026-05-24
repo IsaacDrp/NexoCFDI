@@ -20,6 +20,8 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -33,6 +35,12 @@ import java.util.stream.Collectors;
 public class IngestionServiceImpl implements IngestionService {
 
     private static final ZoneId MEXICO_CITY = ZoneId.of("America/Mexico_City");
+    // Acepta tanto "2024-01-15T12:30" (datetime-local HTML) como "2024-01-15T12:30:00"
+    private static final DateTimeFormatter FECHA_PARSER = new DateTimeFormatterBuilder()
+            .append(DateTimeFormatter.ISO_LOCAL_DATE)
+            .appendLiteral('T')
+            .append(DateTimeFormatter.ISO_LOCAL_TIME)
+            .toFormatter();
 
     private final UserRepository userRepository;
     private final IngestedEmailRepository ingestedEmailRepository;
@@ -90,6 +98,12 @@ public class IngestionServiceImpl implements IngestionService {
     }
 
     @Override
+    public java.util.Optional<JobRunResponse> getLatestSuccessfulJob(String microsoftSub, int year, int month) {
+        User user = resolveUser(microsoftSub);
+        return jobRunRepository.findLatestSuccess(user.id(), year, month).map(JobRunResponse::from);
+    }
+
+    @Override
     public List<IngestedEmailResponse> findIngestedEmails(String microsoftSub, int year, int month) {
         validatePeriodNotFuture(year, month);
         User user = resolveUser(microsoftSub);
@@ -105,7 +119,7 @@ public class IngestionServiceImpl implements IngestionService {
 
         LocalDateTime fecha;
         try {
-            fecha = LocalDateTime.parse(req.getFecha());
+            fecha = LocalDateTime.parse(req.getFecha(), FECHA_PARSER);
         } catch (Exception e) {
             fecha = LocalDateTime.now(MEXICO_CITY);
         }
@@ -172,7 +186,7 @@ public class IngestionServiceImpl implements IngestionService {
         // Parsear fecha si viene
         LocalDateTime fecha = existing.cfdiFecha();
         if (req.getFecha() != null && !req.getFecha().isBlank()) {
-            try { fecha = LocalDateTime.parse(req.getFecha()); } catch (Exception ignored) {}
+            try { fecha = LocalDateTime.parse(req.getFecha(), FECHA_PARSER); } catch (Exception ignored) {}
         }
 
         String rfcEmisor = req.getRfcEmisor() != null

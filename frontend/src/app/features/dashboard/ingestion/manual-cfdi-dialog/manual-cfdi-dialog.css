@@ -3,16 +3,12 @@
   align-items: center;
   gap: 0.5rem;
   margin: 0;
-  font-size: 1.15rem;
-  font-weight: 600;
+  font-size: var(--nx-text-lg);
+  font-weight: 700;
+  color: var(--nx-text-primary);
+  letter-spacing: -0.2px;
 }
-
-.dialog-title-icon {
-  color: #1565c0;
-  font-size: 1.3rem;
-  width: 1.3rem;
-  height: 1.3rem;
-}
+.title-icon { color: var(--nx-primary); }
 
 .dialog-content {
   padding-top: 0.5rem !important;
@@ -21,8 +17,9 @@
 
 .dialog-hint {
   margin: 0 0 1.25rem;
-  font-size: 0.875rem;
-  color: #616161;
+  font-size: var(--nx-text-sm);
+  color: var(--nx-text-secondary);
+  line-height: 1.5;
 }
 
 .cfdi-form {
@@ -31,62 +28,44 @@
   gap: 0.25rem;
 }
 
-.form-row {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
+.form-row   { display: flex; gap: 1rem; flex-wrap: wrap; }
 .field-full { width: 100%; }
-
 .field-rfc    { flex: 0 0 180px; }
 .field-nombre { flex: 1 1 200px; }
-
 .field-amount { flex: 1 1 120px; min-width: 100px; }
 
-/* Stored PDF Section */
+/* Stored PDF */
 .stored-pdf-section {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1rem;
-  background: #f5f5f5;
-  border-radius: 8px;
-  margin-top: 0.5rem;
+  background: var(--nx-surface-alt);
+  border-radius: var(--nx-radius-sm);
+  border: 1px solid var(--nx-border);
+  margin-top: 0.25rem;
 }
-
 .stored-pdf-info {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9rem;
-  color: #424242;
+  font-size: var(--nx-text-sm);
+  color: var(--nx-text-secondary);
 }
-
-.stored-pdf-icon {
-  color: #c62828;
-}
-
-.preview-btn {
-  margin-left: 0.5rem;
-}
+.stored-pdf-icon { color: var(--nx-danger); }
 
 /* File picker */
-.file-section {
-  margin-top: 0.5rem;
-}
+.file-section { margin-top: 0.5rem; }
 
 .file-section-label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #616161;
+  font-size: var(--nx-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nx-text-muted);
   margin: 0 0 0.5rem;
 }
-
-.file-missing-hint {
-  font-weight: 400;
-  color: #f57c00;
-}
+.file-missing-hint { font-weight: 400; color: var(--nx-warning); text-transform: none; }
 
 .file-drop-zone {
   display: flex;
@@ -94,59 +73,33 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 1.25rem;
-  border: 2px dashed #bdbdbd;
-  border-radius: 8px;
+  padding: 1.5rem;
+  border: 2px dashed var(--nx-border);
+  border-radius: var(--nx-radius-md);
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color var(--nx-dur-fast), background var(--nx-dur-fast);
   text-align: center;
 }
-
 .file-drop-zone:hover {
-  border-color: #1565c0;
-  background: #f3f6fd;
+  border-color: var(--nx-primary);
+  background: var(--nx-primary-surface);
 }
-
-.file-drop-icon {
-  font-size: 2rem;
-  width: 2rem;
-  height: 2rem;
-  color: #9e9e9e;
-}
-
-.file-drop-label {
-  font-size: 0.88rem;
-  font-weight: 500;
-  color: #424242;
-}
-
-.file-drop-hint {
-  font-size: 0.78rem;
-  color: #9e9e9e;
-}
-
-.file-input-hidden {
-  display: none;
-}
+.file-drop-icon  { color: var(--nx-n-300); transition: color var(--nx-dur-fast); }
+.file-drop-zone:hover .file-drop-icon { color: var(--nx-primary); }
+.file-drop-label { font-size: var(--nx-text-sm); font-weight: 500; color: var(--nx-text-primary); }
+.file-drop-hint  { font-size: var(--nx-text-xs); color: var(--nx-text-muted); }
+.file-input-hidden { display: none; }
 
 .file-selected {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
-  background: #e8f5e9;
-  border-radius: 8px;
-  border: 1px solid #a5d6a7;
+  background: var(--nx-success-surface);
+  border-radius: var(--nx-radius-sm);
+  border: 1px solid color-mix(in srgb, var(--nx-success) 25%, transparent);
 }
-
-.file-selected-icon {
-  font-size: 1.5rem;
-  width: 1.5rem;
-  height: 1.5rem;
-  color: #2e7d32;
-  flex-shrink: 0;
-}
-
+.file-selected-icon { color: var(--nx-success); flex-shrink: 0; }
 .file-selected-info {
   flex: 1;
   display: flex;
@@ -154,35 +107,15 @@
   gap: 1px;
   min-width: 0;
 }
-
 .file-selected-name {
-  font-size: 0.875rem;
+  font-size: var(--nx-text-sm);
   font-weight: 500;
-  color: #1b5e20;
+  color: var(--nx-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.file-selected-size { font-size: var(--nx-text-xs); color: var(--nx-success); }
+.file-remove-btn    { flex-shrink: 0; width: 28px; height: 28px; }
 
-.file-selected-size {
-  font-size: 0.75rem;
-  color: #388e3c;
-}
-
-.file-remove-btn {
-  width: 28px;
-  height: 28px;
-  line-height: 28px;
-  flex-shrink: 0;
-  color: #2e7d32;
-}
-
-.file-remove-btn mat-icon { font-size: 1rem; width: 1rem; height: 1rem; }
-
-/* Actions */
-.dialog-actions {
-  padding: 0.75rem 1.5rem 1rem !important;
-  gap: 0.5rem;
-}
-
-.btn-spinner { display: inline-block; }
+.dialog-actions { padding: 0.75rem 1.5rem 1rem !important; gap: 0.5rem; }

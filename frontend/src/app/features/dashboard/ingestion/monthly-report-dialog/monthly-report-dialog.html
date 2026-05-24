@@ -1,0 +1,68 @@
+<h2 mat-dialog-title class="dialog-title">
+  <app-icon name="send" [size]="20" class="title-icon" />
+  Enviar reporte mensual
+</h2>
+
+<mat-dialog-content class="dialog-content">
+  <p class="dialog-subtitle">
+    Envía el reporte con los comprobantes de gastos del período
+    <strong>{{ data.month }}/{{ data.year }}</strong>
+  </p>
+
+  <form [formGroup]="form" class="dialog-form" (ngSubmit)="submit()">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Correo de destino</mat-label>
+      <input matInput type="email" formControlName="emailDestino" placeholder="ejemplo@correo.com">
+      @if (form.get('emailDestino')?.hasError('required') && form.get('emailDestino')?.touched) {
+        <mat-error>El correo es obligatorio</mat-error>
+      }
+      @if (form.get('emailDestino')?.hasError('email') && form.get('emailDestino')?.touched) {
+        <mat-error>Formato de correo inválido</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Asunto</mat-label>
+      <input matInput type="text" formControlName="asunto" placeholder="Reporte de Gastos Mensuales">
+      @if (form.get('asunto')?.hasError('required') && form.get('asunto')?.touched) {
+        <mat-error>El asunto es obligatorio</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Mensaje personalizado (opcional)</mat-label>
+      <textarea matInput formControlName="mensajePersonalizado" rows="4"
+                placeholder="Escribe aquí un mensaje adicional..."></textarea>
+    </mat-form-field>
+
+    <div class="upload-section">
+      <p class="upload-label">Comprobantes de ingresos (opcional)</p>
+      <input #fileInput type="file" multiple accept=".pdf,application/pdf" hidden (change)="onFilesSelected($event)">
+      <button type="button" nx-btn variant="ghost" (click)="fileInput.click()" [disabled]="saving()">
+        <app-icon name="attach_file" [size]="16" />
+        Adjuntar PDFs de ingresos
+      </button>
+      @if (ingresoFiles().length > 0) {
+        <ul class="file-list">
+          @for (file of ingresoFiles(); track $index) {
+            <li class="file-item">
+              <app-icon name="picture_as_pdf" [size]="16" class="pdf-icon" />
+              <span class="file-name">{{ file.name }}</span>
+              <button type="button" class="remove-btn" (click)="removeFile($index)" [disabled]="saving()">
+                <app-icon name="close" [size]="14" />
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button nx-btn variant="ghost" mat-dialog-close [disabled]="saving()">Cancelar</button>
+  <button nx-btn variant="solid" (click)="submit()" [disabled]="saving()">
+    @if (saving()) { <span class="nx-spinner"></span> Enviando... }
+    @else { <app-icon name="send" [size]="16" /> Enviar }
+  </button>
+</mat-dialog-actions>

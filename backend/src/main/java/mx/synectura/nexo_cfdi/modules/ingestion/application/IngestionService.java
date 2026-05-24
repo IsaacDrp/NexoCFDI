@@ -30,4 +30,7 @@ public interface IngestionService {
 
     /** Genera una URL temporal para descargar/ver el archivo en MinIO. */
     String getAttachmentPreviewUrl(String microsoftSub, UUID emailId, UUID attachmentId);
+
+    /** Devuelve el último job exitoso del período, o empty si nunca se ha procesado. */
+    java.util.Optional<JobRunResponse> getLatestSuccessfulJob(String microsoftSub, int year, int month);
 }

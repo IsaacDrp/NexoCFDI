@@ -1,0 +1,23 @@
+.dialog-title {
+  font-size: var(--nx-text-lg);
+  font-weight: 700;
+  color: var(--nx-text-primary);
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.dialog-content { padding-top: 0.5rem !important; }
+
+.dialog-description {
+  color: var(--nx-text-secondary);
+  font-size: var(--nx-text-sm);
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+}
+
+.dialog-form { padding-top: 0.25rem; }
+.full-width   { width: 100%; min-width: 340px; }
+
+.dialog-actions { padding: 0.75rem 1.5rem 1rem !important; gap: 0.5rem; }
+
+.ms-btn { gap: 0.5rem; }

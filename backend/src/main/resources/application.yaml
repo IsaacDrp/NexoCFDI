@@ -2,6 +2,11 @@ spring:
   application:
     name: nexo-cfdi
 
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 100MB
+
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:nexocfdi}
     username: ${DB_USERNAME:nexo}
@@ -51,3 +56,12 @@ nexo:
 
   polling:
     interval-minutes: ${POLLING_INTERVAL_MINUTES:15}
+
+  storage:
+    endpoint: ${MINIO_ENDPOINT:https://blob.paydibujos.com}
+    access-key: ${MINIO_ACCESS_KEY:changeme}
+    secret-key: ${MINIO_SECRET_KEY:changeme}
+    bucket: ${MINIO_BUCKET:nexocfdi-docs}
+
+  ingestion:
+    invoice-keywords: factura,CFDI,comprobante,xml

@@ -1,15 +1,15 @@
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { MatButtonModule } from '@angular/material/button';
 import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
 import { EventType } from '@azure/msal-browser';
 import { filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { loginRequest } from '../../core/auth/msal.config';
+import { AppBtnDirective } from '../../core/ui/button/button.directive';
 
 @Component({
   selector: 'app-welcome',
-  imports: [MatButtonModule],
+  imports: [AppBtnDirective],
   templateUrl: './welcome.html',
   styleUrl: './welcome.css',
 })

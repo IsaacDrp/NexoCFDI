@@ -1,6 +1,6 @@
-<h2 mat-dialog-title>Vincular cuenta de correo</h2>
+<h2 mat-dialog-title class="dialog-title">Vincular cuenta de correo</h2>
 
-<mat-dialog-content>
+<mat-dialog-content class="dialog-content">
   <p class="dialog-description">
     Se abrirá una ventana para autenticarte con Microsoft 365. Cuando finalices,
     la cuenta quedará vinculada automáticamente.
@@ -17,10 +17,10 @@
   </form>
 </mat-dialog-content>
 
-<mat-dialog-actions align="end">
-  <button mat-button mat-dialog-close>Cancelar</button>
-  <button mat-flat-button (click)="confirm()" [disabled]="form.invalid">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" width="18" height="18">
+<mat-dialog-actions align="end" class="dialog-actions">
+  <button nx-btn variant="ghost" mat-dialog-close>Cancelar</button>
+  <button nx-btn variant="solid" (click)="confirm()" [disabled]="form.invalid" class="ms-btn">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" width="18" height="18" aria-hidden="true" style="flex-shrink:0">
       <path fill="#f3f3f3" d="M0 0h23v23H0z"/>
       <path fill="#f35325" d="M1 1h10v10H1z"/>
       <path fill="#81bc06" d="M12 1h10v10H12z"/>
@@ -30,15 +30,3 @@
     Continuar con Microsoft
   </button>
 </mat-dialog-actions>
-
-<style>
-  .dialog-description {
-    color: #616161;
-    font-size: 0.875rem;
-    margin: 0 0 1.25rem;
-    line-height: 1.5;
-  }
-  .dialog-form { padding-top: 0.25rem; }
-  .full-width { width: 100%; min-width: 340px; }
-  mat-dialog-actions button { gap: 0.4rem; }
-</style>

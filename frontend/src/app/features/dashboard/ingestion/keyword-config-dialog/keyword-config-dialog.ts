@@ -1,14 +1,13 @@
 import { Component, NgZone, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { AppBtnDirective } from '../../../../core/ui/button/button.directive';
+import { AppIconComponent } from '../../../../core/ui/icon/icon.component';
+import { ToastService } from '../../../../core/ui/toast/toast.service';
 import { KeywordService } from '../../../../core/services/keyword.service';
 import { KeywordType, UserKeyword } from '../../../../core/models/keyword.model';
 
@@ -17,43 +16,42 @@ import { KeywordType, UserKeyword } from '../../../../core/models/keyword.model'
   imports: [
     ReactiveFormsModule,
     MatDialogModule,
-    MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
-    MatIconModule,
-    MatTabsModule,
     MatTooltipModule,
     MatProgressSpinnerModule,
+    AppBtnDirective,
+    AppIconComponent,
   ],
   templateUrl: './keyword-config-dialog.html',
   styleUrl: './keyword-config-dialog.css',
 })
 export class KeywordConfigDialogComponent implements OnInit {
   private keywordService = inject(KeywordService);
-  private snackBar = inject(MatSnackBar);
-  private ngZone = inject(NgZone);
-  private fb = inject(FormBuilder);
+  private toast          = inject(ToastService);
+  private ngZone         = inject(NgZone);
+  private fb             = inject(FormBuilder);
 
-  loading = signal(true);
-  savingInclude = signal(false);
-  savingExclude = signal(false);
+  activeTab = signal(0);
+  loading   = signal(true);
+
+  savingInclude       = signal(false);
+  savingExclude       = signal(false);
   savingSenderInclude = signal(false);
   savingSenderExclude = signal(false);
-  deletingId = signal<string | null>(null);
+  deletingId          = signal<string | null>(null);
 
-  includeKeywords = signal<UserKeyword[]>([]);
-  excludeKeywords = signal<UserKeyword[]>([]);
+  includeKeywords       = signal<UserKeyword[]>([]);
+  excludeKeywords       = signal<UserKeyword[]>([]);
   senderIncludeKeywords = signal<UserKeyword[]>([]);
   senderExcludeKeywords = signal<UserKeyword[]>([]);
 
-  includeForm = this.fb.group({ phrase: ['', [Validators.required, Validators.maxLength(255)]] });
-  excludeForm = this.fb.group({ phrase: ['', [Validators.required, Validators.maxLength(255)]] });
+  includeForm       = this.fb.group({ phrase: ['', [Validators.required, Validators.maxLength(255)]] });
+  excludeForm       = this.fb.group({ phrase: ['', [Validators.required, Validators.maxLength(255)]] });
   senderIncludeForm = this.fb.group({ phrase: ['', [Validators.required, Validators.maxLength(255)]] });
   senderExcludeForm = this.fb.group({ phrase: ['', [Validators.required, Validators.maxLength(255)]] });
 
-  ngOnInit() {
-    this.load();
-  }
+  ngOnInit() { this.load(); }
 
   private load() {
     this.loading.set(true);
@@ -69,7 +67,7 @@ export class KeywordConfigDialogComponent implements OnInit {
       },
       error: () => {
         this.ngZone.run(() => {
-          this.snackBar.open('Error al cargar las palabras clave', 'Cerrar', { duration: 4000 });
+          this.toast.error('Error al cargar las palabras clave');
           this.loading.set(false);
         });
       },
@@ -78,29 +76,20 @@ export class KeywordConfigDialogComponent implements OnInit {
 
   addKeyword(type: KeywordType) {
     const formMap = {
-      INCLUDE: this.includeForm,
-      EXCLUDE: this.excludeForm,
-      SENDER_INCLUDE: this.senderIncludeForm,
-      SENDER_EXCLUDE: this.senderExcludeForm,
+      INCLUDE: this.includeForm, EXCLUDE: this.excludeForm,
+      SENDER_INCLUDE: this.senderIncludeForm, SENDER_EXCLUDE: this.senderExcludeForm,
     };
     const savingMap = {
-      INCLUDE: this.savingInclude,
-      EXCLUDE: this.savingExclude,
-      SENDER_INCLUDE: this.savingSenderInclude,
-      SENDER_EXCLUDE: this.savingSenderExclude,
+      INCLUDE: this.savingInclude, EXCLUDE: this.savingExclude,
+      SENDER_INCLUDE: this.savingSenderInclude, SENDER_EXCLUDE: this.savingSenderExclude,
     };
     const listMap = {
-      INCLUDE: this.includeKeywords,
-      EXCLUDE: this.excludeKeywords,
-      SENDER_INCLUDE: this.senderIncludeKeywords,
-      SENDER_EXCLUDE: this.senderExcludeKeywords,
+      INCLUDE: this.includeKeywords, EXCLUDE: this.excludeKeywords,
+      SENDER_INCLUDE: this.senderIncludeKeywords, SENDER_EXCLUDE: this.senderExcludeKeywords,
     };
 
     const form = formMap[type];
-    if (form.invalid) {
-      form.markAllAsTouched();
-      return;
-    }
+    if (form.invalid) { form.markAllAsTouched(); return; }
 
     const saving = savingMap[type];
     saving.set(true);
@@ -117,15 +106,10 @@ export class KeywordConfigDialogComponent implements OnInit {
         this.ngZone.run(() => {
           saving.set(false);
           const isSender = type === 'SENDER_INCLUDE' || type === 'SENDER_EXCLUDE';
-          const msg =
-            err?.error?.code === 'DUPLICATE_KEYWORD'
-              ? isSender
-                ? 'Esa dirección ya está en la lista'
-                : 'Esa palabra clave ya existe'
-              : isSender
-                ? 'Error al guardar la dirección'
-                : 'Error al guardar la palabra clave';
-          this.snackBar.open(msg, 'Cerrar', { duration: 4000 });
+          const msg = err?.error?.code === 'DUPLICATE_KEYWORD'
+            ? isSender ? 'Esa dirección ya está en la lista' : 'Esa palabra clave ya existe'
+            : isSender ? 'Error al guardar la dirección'    : 'Error al guardar la palabra clave';
+          this.toast.error(msg);
         });
       },
     });
@@ -134,10 +118,8 @@ export class KeywordConfigDialogComponent implements OnInit {
   deleteKeyword(kw: UserKeyword) {
     this.deletingId.set(kw.id);
     const listMap = {
-      INCLUDE: this.includeKeywords,
-      EXCLUDE: this.excludeKeywords,
-      SENDER_INCLUDE: this.senderIncludeKeywords,
-      SENDER_EXCLUDE: this.senderExcludeKeywords,
+      INCLUDE: this.includeKeywords, EXCLUDE: this.excludeKeywords,
+      SENDER_INCLUDE: this.senderIncludeKeywords, SENDER_EXCLUDE: this.senderExcludeKeywords,
     };
     this.keywordService.delete(kw.id).subscribe({
       next: () => {
@@ -149,7 +131,7 @@ export class KeywordConfigDialogComponent implements OnInit {
       error: () => {
         this.ngZone.run(() => {
           this.deletingId.set(null);
-          this.snackBar.open('Error al eliminar', 'Cerrar', { duration: 4000 });
+          this.toast.error('Error al eliminar');
         });
       },
     });

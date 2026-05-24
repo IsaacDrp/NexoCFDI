@@ -1,5 +1,5 @@
 <h2 mat-dialog-title class="dialog-title">
-  <mat-icon class="dialog-title-icon">{{ editMode ? 'edit' : 'add_circle_outline' }}</mat-icon>
+  <app-icon [name]="editMode ? 'edit' : 'plus-circle'" [size]="20" class="title-icon" />
   {{ editMode ? 'Editar datos CFDI' : 'Agregar CFDI manual' }}
 </h2>
 
@@ -47,51 +47,49 @@
       <mat-form-field appearance="outline" class="field-amount">
         <mat-label>Subtotal</mat-label>
         <span matTextPrefix>$&nbsp;</span>
-        <input matInput formControlName="subtotal" type="number" min="0" step="0.01">
+        <input matInput formControlName="subtotal" type="text" inputmode="decimal" placeholder="0.00">
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="field-amount">
         <mat-label>IVA</mat-label>
         <span matTextPrefix>$&nbsp;</span>
-        <input matInput formControlName="iva" type="number" min="0" step="0.01">
+        <input matInput formControlName="iva" type="text" inputmode="decimal" placeholder="0.00">
       </mat-form-field>
 
       <mat-form-field appearance="outline" class="field-amount">
         <mat-label>Total</mat-label>
         <span matTextPrefix>$&nbsp;</span>
-        <input matInput formControlName="total" type="number" min="0" step="0.01">
+        <input matInput formControlName="total" type="text" inputmode="decimal" placeholder="0.00">
       </mat-form-field>
     </div>
 
-    <!-- Original PDF Preview -->
     @if (editMode && hasStoredPdf()) {
       <div class="stored-pdf-section">
         <div class="stored-pdf-info">
-          <mat-icon class="stored-pdf-icon">picture_as_pdf</mat-icon>
+          <app-icon name="file-text" [size]="18" class="stored-pdf-icon" />
           <span>PDF original disponible</span>
-          <button mat-button color="primary" class="preview-btn" type="button" (click)="previewStoredPdf()">
+          <button nx-btn variant="ghost" color="primary" size="sm" type="button" (click)="previewStoredPdf()">
             Ver PDF
           </button>
         </div>
         @if (!replaceFile()) {
-          <button mat-stroked-button color="warn" class="replace-btn" type="button" (click)="replaceFile.set(true)">
+          <button nx-btn variant="outline" color="danger" size="sm" type="button" (click)="replaceFile.set(true)">
             Reemplazar archivo
           </button>
         } @else {
-          <button mat-button class="replace-btn" type="button" (click)="replaceFile.set(false); selectedFile.set(null)">
+          <button nx-btn variant="ghost" size="sm" type="button" (click)="replaceFile.set(false); selectedFile.set(null)">
             Conservar original
           </button>
         }
       </div>
     }
 
-    <!-- File picker: siempre en modo nuevo; en modo edición solo si falta PDF o XML o si eligió reemplazar -->
     @if (showFilePicker) {
       <div class="file-section">
-        @if (!editMode) {
-          <p class="file-section-label">Adjuntar PDF o ZIP (opcional)</p>
-        } @else {
-          <p class="file-section-label">
+        <p class="file-section-label">
+          @if (!editMode) {
+            Adjuntar PDF o ZIP (opcional)
+          } @else {
             Adjuntar archivo faltante
             @if (!existingEmail?.hasPdf && !existingEmail?.hasXml) {
               <span class="file-missing-hint">— no tiene PDF ni XML</span>
@@ -100,11 +98,11 @@
             } @else {
               <span class="file-missing-hint">— no tiene XML</span>
             }
-          </p>
-        }
+          }
+        </p>
         @if (!selectedFile()) {
           <label class="file-drop-zone" for="file-input">
-            <mat-icon class="file-drop-icon">upload_file</mat-icon>
+            <app-icon name="upload" [size]="32" class="file-drop-icon" />
             <span class="file-drop-label">
               {{ editMode ? 'Adjuntar PDF, XML o ZIP' : 'Adjuntar PDF o ZIP (opcional)' }}
             </span>
@@ -114,17 +112,16 @@
           </label>
         } @else {
           <div class="file-selected">
-            <mat-icon class="file-selected-icon">
-              @if (selectedFile()!.name.endsWith('.pdf')) { picture_as_pdf }
-              @else if (selectedFile()!.name.endsWith('.xml')) { code }
-              @else { folder_zip }
-            </mat-icon>
+            <app-icon
+              [name]="selectedFile()!.name.endsWith('.pdf') ? 'file-text' : selectedFile()!.name.endsWith('.xml') ? 'code' : 'archive'"
+              [size]="22" class="file-selected-icon" />
             <div class="file-selected-info">
               <span class="file-selected-name">{{ selectedFile()!.name }}</span>
               <span class="file-selected-size">{{ (selectedFile()!.size / 1024).toFixed(1) }} KB</span>
             </div>
-            <button mat-icon-button class="file-remove-btn" (click)="removeFile()" matTooltip="Quitar archivo" type="button">
-              <mat-icon>close</mat-icon>
+            <button nx-btn variant="icon" color="danger" class="file-remove-btn"
+                    (click)="removeFile()" matTooltip="Quitar archivo" type="button">
+              <app-icon name="x" [size]="14" />
             </button>
           </div>
         }
@@ -135,13 +132,10 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end" class="dialog-actions">
-  <button mat-stroked-button [mat-dialog-close]="null" [disabled]="saving()">Cancelar</button>
-  <button mat-flat-button (click)="submit()" [disabled]="saving()">
-    @if (saving()) {
-      <mat-spinner diameter="16" class="btn-spinner" />
-    } @else {
-      <mat-icon>{{ editMode ? 'save' : 'add' }}</mat-icon>
-    }
+  <button nx-btn variant="ghost" [mat-dialog-close]="null" [disabled]="saving()">Cancelar</button>
+  <button nx-btn variant="solid" (click)="submit()" [disabled]="saving()">
+    @if (saving()) { <span class="nx-spinner"></span> }
+    @else { <app-icon [name]="editMode ? 'save' : 'plus'" [size]="16" /> }
     {{ editMode ? 'Guardar cambios' : 'Guardar' }}
   </button>
 </mat-dialog-actions>
