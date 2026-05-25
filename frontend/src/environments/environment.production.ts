@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: '/api',
+  apiUrl: '',
   msalClientId: 'AZURE_LOGIN_CLIENT_ID_PLACEHOLDER',
   msalTenantId: 'AZURE_TENANT_ID_PLACEHOLDER',
   msalRedirectUri: 'MSAL_REDIRECT_URI_PLACEHOLDER',
