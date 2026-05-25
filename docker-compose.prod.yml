@@ -53,6 +53,10 @@ services:
     restart: unless-stopped
     ports:
       - "${HOST_PORT_FRONTEND:-80}:80"
+    environment:
+      AZURE_LOGIN_CLIENT_ID: ${AZURE_LOGIN_CLIENT_ID}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-common}
+      MSAL_REDIRECT_URI: ${MSAL_REDIRECT_URI:-https://nexocfdi.com}
     networks:
       - nexocfdi-prod-net
 

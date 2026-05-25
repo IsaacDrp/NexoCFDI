@@ -1,9 +1,9 @@
 export const environment = {
   production: true,
   apiUrl: '/api',
-  msalClientId: 'REPLACE_WITH_AZURE_CLIENT_ID',
-  msalTenantId: 'REPLACE_WITH_AZURE_TENANT_ID',
-  msalRedirectUri: 'https://your-domain.com',
-  oauthRedirectUri: 'https://your-domain.com/oauth/callback',
-  apiScope: 'api://REPLACE_WITH_AZURE_CLIENT_ID/access_as_user',
+  msalClientId: 'AZURE_LOGIN_CLIENT_ID_PLACEHOLDER',
+  msalTenantId: 'AZURE_TENANT_ID_PLACEHOLDER',
+  msalRedirectUri: 'MSAL_REDIRECT_URI_PLACEHOLDER',
+  oauthRedirectUri: 'OAUTH_REDIRECT_URI_PLACEHOLDER',
+  apiScope: 'API_SCOPE_PLACEHOLDER',
 };
