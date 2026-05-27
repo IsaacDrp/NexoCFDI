@@ -18,7 +18,7 @@ services:
       retries: 5
 
   backend-sit:
-    image: ghcr.io/${GITHUB_ACTOR}/nexocfdi-backend:sit
+    image: ghcr.io/${GITHUB_ACTOR:-isaacdrp}/nexocfdi-backend:sit
     container_name: backend-sit
     restart: unless-stopped
     depends_on:
@@ -33,6 +33,7 @@ services:
       DB_USERNAME: ${DB_USERNAME:-nexo_sit}
       DB_PASSWORD: ${DB_PASSWORD}
       SERVER_PORT: 8080
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:4200,https://sit.nexocfdi.synectura.com}
       SHOW_SQL: ${SHOW_SQL:-true}
       POLLING_INTERVAL_MINUTES: ${POLLING_INTERVAL_MINUTES:-15}
       AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
@@ -48,11 +49,15 @@ services:
       - nexocfdi-sit-net
 
   frontend-sit:
-    image: ghcr.io/${GITHUB_ACTOR}/nexocfdi-frontend:sit
+    image: ghcr.io/${GITHUB_ACTOR:-isaacdrp}/nexocfdi-frontend:sit
     container_name: frontend-sit
     restart: unless-stopped
     ports:
       - "${HOST_PORT_FRONTEND:-81}:80"
+    environment:
+      AZURE_LOGIN_CLIENT_ID: ${AZURE_LOGIN_CLIENT_ID}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-common}
+      MSAL_REDIRECT_URI: ${MSAL_REDIRECT_URI:-https://sit.nexocfdi.synectura.com}
     networks:
       - nexocfdi-sit-net
 
